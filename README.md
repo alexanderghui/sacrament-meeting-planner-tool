@@ -1,36 +1,108 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Sacrament Meeting Planner
 
-## Getting Started
+An internal planning tool for a ward bishopric (The Church of Jesus Christ of
+Latter-day Saints). It tracks who has spoken in sacrament meeting and when,
+helps plan upcoming meetings, and keeps a browsable archive of past meetings.
 
-First, run the development server:
+> Built for one ward's bishopric. Real member data is never committed — see
+> [Data & privacy](#data--privacy).
+
+## Features
+
+- **Members** — every member with a color-coded "how long since they last
+  spoke" indicator, filters by recency / age group (primary, youth, adult) /
+  gender, and inline-editable **preferred names** ("Alex Hui" shown over the
+  official "Alexander Gabriel Hui").
+- **Upcoming** — plan each Sunday: assign speakers (with topics and an
+  invited → confirmed → spoke status), opening/closing prayers, presiding,
+  conducting, chorister, and the four hymns.
+- **History** — search and browse past meetings by year/month, with a clean
+  read-only program view and a "Correct" mode for fixing records.
+- **Activity** — an audit log attributing every change to the signed-in user.
+- **Roster import** — upload a CSV roster, preview a diff against the current
+  list, and apply changes (with version history).
+- **Auth** — Google sign-in (restricted to an allowlist) behind an additional
+  shared-password gate, so member data isn't exposed by sign-in alone.
+
+## Tech stack
+
+- [Next.js](https://nextjs.org) (App Router) · React 19 · TypeScript
+- [Tailwind CSS v4](https://tailwindcss.com)
+- [Drizzle ORM](https://orm.drizzle.team)
+- [PGlite](https://pglite.dev) for local dev, [Neon](https://neon.tech)
+  Postgres in production — the database driver switches automatically based on
+  whether `DATABASE_URL` is set
+- [Auth.js v5](https://authjs.dev) (`next-auth@beta`)
+
+## Getting started
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run db:setup   # runs migrations + seeds a small SAMPLE ward
+npm run dev        # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+With no environment variables set, the app runs entirely locally: an in-process
+PGlite database (persisted to `./.pglite`) and a "dev sign-in" button that
+stands in for Google. Seed data is fake — see `sample-roster.csv`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Environment variables
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+All optional for local dev; required (except `ACCESS_PASSWORD`) for a real
+deployment. Put them in `.env.local` (gitignored).
 
-## Learn More
+| Variable | Purpose |
+| --- | --- |
+| `DATABASE_URL` | Neon Postgres connection string. When set, the app uses the Neon HTTP driver; when blank it uses local PGlite. |
+| `AUTH_SECRET` | Auth.js session secret (`openssl rand -base64 33`). |
+| `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET` | Google OAuth client. When present, the login page shows "Sign in with Google" instead of the dev button. |
+| `ALLOWED_EMAILS` | Comma-separated emails allowed to sign in. Blank = anyone may sign in. |
+| `ACCESS_PASSWORD` | Shared passphrase every signed-in user must enter before seeing member data. Blank disables the gate. |
 
-To learn more about Next.js, take a look at the following resources:
+## Scripts
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+| Command | Description |
+| --- | --- |
+| `npm run dev` | Start the dev server (PGlite). |
+| `npm run build` | Production build. |
+| `npm run db:generate` | Generate a Drizzle migration from schema changes. |
+| `npm run db:migrate` | Apply migrations to the local PGlite database. |
+| `npm run db:seed` | Seed the sample ward. |
+| `npm run db:setup` | `db:migrate` + `db:seed`. |
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+The `scripts/` folder also contains data-import and back-fill utilities
+(`import-schedule`, `import-trello`, `link-nicknames`, etc.). These read from a
+gitignored `private/` folder specific to this ward's data sources (an LCR roster
+export, a Google Sheet, and a Trello board) and aren't needed to run the app.
 
-## Deploy on Vercel
+## Project structure
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```
+src/
+  app/            App Router routes (members, upcoming, history, activity, login)
+  components/     UI + feature components (members table, meeting card, ...)
+  lib/            data access, auth, server actions, domain helpers
+  lib/db/         Drizzle schema + driver (PGlite ↔ Neon)
+  proxy.ts        auth + shared-password gate (Next.js "proxy"/middleware)
+scripts/          migrations, seed, and data-import utilities
+drizzle/          generated SQL migrations
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Deployment
+
+Deployed on [Vercel](https://vercel.com) with a Neon database. Set the
+environment variables above in the Vercel project, then push (or
+`vercel deploy --prod`). Run migrations against Neon with
+`DATABASE_URL=... npx drizzle-kit push` before first use.
+
+## Data & privacy
+
+This repository contains **no real member data and no secrets**. The following
+are gitignored and never committed:
+
+- `private/` — the real roster and source-data exports
+- `.pglite/` — the local database (holds real data once imported)
+- `.env*` — all credentials
+- `.playwright-mcp/` — browser-test snapshots
+
+The only roster in the repo, `sample-roster.csv`, is fabricated.
