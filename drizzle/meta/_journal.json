@@ -57,6 +57,13 @@
       "when": 1781626442667,
       "tag": "0007_spotty_mongu",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1781629058403,
+      "tag": "0008_chunky_changeling",
+      "breakpoints": true
     }
   ]
 }

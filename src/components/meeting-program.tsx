@@ -50,7 +50,8 @@ export function MeetingProgram({
     !meeting.presiding &&
     !meeting.conducting &&
     !meeting.chorister &&
-    !meeting.accompanist;
+    !meeting.accompanist &&
+    !meeting.musicalNumber;
 
   if (empty) {
     return (
@@ -136,7 +137,7 @@ export function MeetingProgram({
         </div>
       )}
 
-      {hymns.length > 0 && (
+      {(hymns.length > 0 || meeting.musicalNumber) && (
         <div>
           <Label>Hymns</Label>
           <ul className="space-y-0.5 text-sm text-foreground">
@@ -147,6 +148,12 @@ export function MeetingProgram({
               </li>
             ))}
           </ul>
+          {meeting.musicalNumber && (
+            <p className="mt-1.5 text-sm text-foreground">
+              <span className="text-muted-foreground">Musical number:</span>{" "}
+              {meeting.musicalNumber}
+            </p>
+          )}
         </div>
       )}
 

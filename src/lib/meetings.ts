@@ -44,6 +44,7 @@ export type PlannerMeeting = {
   presiding: string | null;
   chorister: string | null;
   accompanist: string | null;
+  musicalNumber: string | null;
   theme: string | null;
   openingHymn: number | null;
   sacramentHymn: number | null;
@@ -164,6 +165,7 @@ function assemble(
       presiding: m.presiding,
       chorister: m.chorister,
       accompanist: m.accompanist,
+      musicalNumber: m.musicalNumber,
       theme: m.theme,
       openingHymn: m.openingHymn,
       sacramentHymn: m.sacramentHymn,

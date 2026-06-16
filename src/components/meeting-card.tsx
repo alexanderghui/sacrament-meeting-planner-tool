@@ -41,11 +41,11 @@ const TYPE_LABELS: Record<MeetingTypeValue, string> = {
   no_meeting: "No meeting",
 };
 
+// Planner only needs the invite → confirm flow. ("spoke" still exists in the DB
+// for imported historical speakers; we just don't offer it as a choice here.)
 const STATUS_OPTIONS: { value: AssignmentStatusValue; label: string }[] = [
   { value: "invited", label: "Invited" },
   { value: "confirmed", label: "Confirmed" },
-  { value: "spoke", label: "Spoke" },
-  { value: "declined", label: "Declined" },
 ];
 
 const SPEAKER_POSITIONS = [1, 2, 3];
@@ -403,6 +403,18 @@ export function MeetingCard({
                       />
                     </div>
                   ))}
+                </div>
+                <div className="mt-4">
+                  <Label>Musical number</Label>
+                  <Input
+                    defaultValue={meeting.musicalNumber ?? ""}
+                    placeholder="Choir, solo, or special number — e.g. Ward choir: “O Holy Jesus”"
+                    onBlur={(e) =>
+                      run(() =>
+                        updateMeetingText(meeting.id, "musicalNumber", e.target.value)
+                      )
+                    }
+                  />
                 </div>
               </div>
             </>
