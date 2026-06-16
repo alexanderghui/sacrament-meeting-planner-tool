@@ -39,3 +39,23 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local dev database (PGlite)
+.pglite/
+
+# env
+.env
+.env*.local
+
+# real ward data (never commit)
+private/
+.venv/
+
+# Playwright/browser-MCP artifacts — snapshots contain real member data
+.playwright-mcp/
+
+# stray local screenshots / data dumps (never commit real rosters)
+*.png
+*.pdf
+roster*.csv
+!sample-roster.csv

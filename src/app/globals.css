@@ -1,26 +1,129 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:is(.dark *));
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Church Website Color System */
+  --grey2: #f7f8f8;
+  --grey3: #eff0f0;
+  --grey5: #e0e2e2;
+  --grey10: #d0d3d3;
+  --grey15: #bdc0c0;
+  --grey20: #a9adad;
+  --grey25: #9da1a1;
+  --grey30: #878a8c;
+  --grey35: #676b6e;
+  --grey40: #53575b;
+  --grey60: #3a3d40;
+  --grey90: #0d0f10;
+
+  --blue5: #b0eefc;
+  --blue10: #7de3f4;
+  --blue15: #49cce6;
+  --blue20: #01b6d1;
+  --blue25: #007da5;
+  --blue30: #006184;
+  --blue35: #005175;
+  --blue40: #003057;
+
+  --colorLink: #177c9c;
+  --info40: #157493;
+
+  /* Speaking-recency status colors */
+  --status-green: #2e7d32;
+  --status-green-bg: #e7f3e8;
+  --status-amber: #8a6100;
+  --status-amber-bg: #fbf0d9;
+  --status-red: #bd0057;
+  --status-red-bg: #fbe4ee;
+  --status-neutral: #53575b;
+  --status-neutral-bg: #eff0f0;
+
+  /* Church shadows */
+  --boxShadowRaised: 0 2px 4px 0 rgba(0, 0, 0, 0.2);
+  --boxShadowDetached: 0 4px 8px 0 rgba(0, 0, 0, 0.2);
+  --boxShadowOverlaid: 0 8px 16px 0 rgba(0, 0, 0, 0.2);
+
+  /* Application tokens */
+  --background: var(--grey2);
+  --foreground: var(--grey90);
+  --card: #ffffff;
+  --card-foreground: var(--grey90);
+  --popover: #ffffff;
+  --popover-foreground: var(--grey90);
+  --primary: var(--blue30);
+  --primary-foreground: #ffffff;
+  --secondary: var(--grey3);
+  --secondary-foreground: var(--grey90);
+  --muted: var(--grey2);
+  --muted-foreground: var(--grey40);
+  --accent: var(--grey3);
+  --accent-foreground: var(--grey90);
+  --destructive: #bd0057;
+  --destructive-foreground: #ffffff;
+  --border: var(--grey15);
+  --input: var(--grey15);
+  --input-background: #ffffff;
+  --ring: var(--blue30);
+  --radius: 0.125rem;
+
+  --link: var(--colorLink);
+  --link-hover: var(--info40);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-input-background: var(--input-background);
+  --color-ring: var(--ring);
+
+  --radius-sm: var(--radius);
+  --radius-md: var(--radius);
+  --radius-lg: calc(var(--radius) + 0.125rem);
+  --radius-xl: calc(var(--radius) + 0.25rem);
+
+  --font-sans: var(--font-source-sans), -apple-system, BlinkMacSystemFont,
+    "Segoe UI", sans-serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer base {
+  * {
+    border-color: var(--border);
   }
-}
-
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-source-sans), -apple-system, BlinkMacSystemFont,
+      "Segoe UI", sans-serif;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  h1,
+  h2 {
+    font-weight: 300;
+    line-height: 1.2;
+  }
+  h3 {
+    font-weight: 600;
+    line-height: 1.2;
+  }
+  p {
+    line-height: 1.6;
+  }
 }

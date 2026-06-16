@@ -1,0 +1,15 @@
+Name,Household,Phone,Email,Birth Date
+"Smith, John",Smith,801-555-9999,john.smith@example.com,1984-03-11
+"Smith, Mary",Smith,,mary.smith@example.com,1986-07-22
+"Johnson, David",Johnson,801-555-0143,david.johnson@example.com,1979-01-05
+"Johnson, Sarah",Johnson,,,1981-09-30
+"Williams, Michael",Williams,,,1972-12-02
+"Williams, Emily",Williams,,,1975-04-18
+"Brown, Robert",Brown,801-555-0190,,1990-08-14
+"Brown, Jennifer",Brown,,,1991-02-27
+"Davis, James",Davis,,,1968-06-09
+"Davis, Patricia",Davis,,,1970-10-21
+"Miller, Ethan",Miller,,,2009-05-03
+"Miller, Olivia",Miller,,,2011-11-19
+"Garcia, William",Garcia,801-555-0177,,1995-03-25
+"Taylor, Mark",Taylor,801-555-0234,mark.taylor@example.com,1988-09-14
