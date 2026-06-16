@@ -98,6 +98,7 @@ export const meetings = pgTable("meetings", {
   conducting: text("conducting"),
   presiding: text("presiding"),
   chorister: text("chorister"),
+  accompanist: text("accompanist"), // pianist / organist
   theme: text("theme"),
   openingHymn: integer("opening_hymn"),
   sacramentHymn: integer("sacrament_hymn"),

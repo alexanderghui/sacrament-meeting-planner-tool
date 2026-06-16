@@ -1,5 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import type { PlannerMeeting, AssignmentStatusValue } from "@/lib/meetings";
+import { HYMN_TITLES } from "@/lib/hymns";
 
 const STATUS_LABEL: Record<AssignmentStatusValue, string> = {
   invited: "Invited",
@@ -10,7 +11,9 @@ const STATUS_LABEL: Record<AssignmentStatusValue, string> = {
 
 function hymnLabel(n: number | null, titles: Record<number, string>) {
   if (n == null) return null;
-  return titles[n] ? `#${n} — ${titles[n]}` : `#${n}`;
+  // Prefer the complete bundled hymnbook; fall back to the DB-derived titles.
+  const title = HYMN_TITLES[n] ?? titles[n];
+  return title ? `#${n} — ${title}` : `#${n}`;
 }
 
 function Label({ children }: { children: React.ReactNode }) {
@@ -46,7 +49,8 @@ export function MeetingProgram({
     !meeting.closingPrayer &&
     !meeting.presiding &&
     !meeting.conducting &&
-    !meeting.chorister;
+    !meeting.chorister &&
+    !meeting.accompanist;
 
   if (empty) {
     return (
@@ -58,7 +62,10 @@ export function MeetingProgram({
 
   return (
     <div className="grid gap-x-10 gap-y-5 sm:grid-cols-2">
-      {(meeting.presiding || meeting.conducting || meeting.chorister) && (
+      {(meeting.presiding ||
+        meeting.conducting ||
+        meeting.chorister ||
+        meeting.accompanist) && (
         <div className="space-y-1 text-sm">
           {meeting.presiding && (
             <div className="flex gap-2">
@@ -76,6 +83,12 @@ export function MeetingProgram({
             <div className="flex gap-2">
               <span className="w-24 shrink-0 text-muted-foreground">Chorister</span>
               <span className="text-foreground">{meeting.chorister}</span>
+            </div>
+          )}
+          {meeting.accompanist && (
+            <div className="flex gap-2">
+              <span className="w-24 shrink-0 text-muted-foreground">Accompanist</span>
+              <span className="text-foreground">{meeting.accompanist}</span>
             </div>
           )}
         </div>

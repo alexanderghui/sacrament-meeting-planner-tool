@@ -50,6 +50,13 @@
       "when": 1781586790672,
       "tag": "0006_complete_sunspot",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1781626442667,
+      "tag": "0007_spotty_mongu",
+      "breakpoints": true
     }
   ]
 }

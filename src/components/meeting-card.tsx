@@ -11,6 +11,7 @@ import {
   MemberCombobox,
   type SpeakerSelection,
 } from "@/components/member-combobox";
+import { HymnCombobox } from "@/components/hymn-combobox";
 import { cn } from "@/lib/utils";
 import {
   setSpeaker,
@@ -281,6 +282,18 @@ export function MeetingCard({
                     }
                   />
                 </div>
+                <div>
+                  <Label>Pianist / organist</Label>
+                  <Input
+                    defaultValue={meeting.accompanist ?? ""}
+                    placeholder="Accompanist"
+                    onBlur={(e) =>
+                      run(() =>
+                        updateMeetingText(meeting.id, "accompanist", e.target.value)
+                      )
+                    }
+                  />
+                </div>
               </div>
 
               {/* Speakers */}
@@ -376,22 +389,16 @@ export function MeetingCard({
                 <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-foreground">
                   <Music className="size-4 text-[var(--blue30)]" /> Hymns
                 </div>
-                <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+                <div className="grid gap-4 sm:grid-cols-2">
                   {HYMN_FIELDS.map(({ key, label }) => (
                     <div key={key}>
                       <Label>{label}</Label>
-                      <Input
-                        type="number"
-                        inputMode="numeric"
-                        min={1}
-                        max={1000}
-                        defaultValue={meeting[key] ?? ""}
-                        placeholder="#"
-                        onBlur={(e) => {
-                          const v = e.target.value
-                            ? parseInt(e.target.value, 10)
-                            : null;
-                          run(() => updateMeetingHymn(meeting.id, key, v));
+                      <HymnCombobox
+                        value={meeting[key]}
+                        ariaLabel={`${label} hymn`}
+                        onChange={(n) => {
+                          setMeeting((m) => ({ ...m, [key]: n }));
+                          run(() => updateMeetingHymn(meeting.id, key, n));
                         }}
                       />
                     </div>

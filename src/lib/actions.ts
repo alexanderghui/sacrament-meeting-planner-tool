@@ -80,7 +80,7 @@ function revalidatePlanner() {
   revalidatePath("/history");
 }
 
-const MEETING_TEXT_FIELDS = ["conducting", "presiding", "chorister", "theme", "notes"] as const;
+const MEETING_TEXT_FIELDS = ["conducting", "presiding", "chorister", "accompanist", "theme", "notes"] as const;
 const MEETING_HYMN_FIELDS = [
   "openingHymn",
   "sacramentHymn",
