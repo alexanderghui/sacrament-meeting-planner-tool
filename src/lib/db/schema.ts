@@ -71,6 +71,9 @@ export const members = pgTable("members", {
   // Manual override for when birthdate is blank; otherwise derived at query time.
   ageCategoryOverride: ageCategory("age_category_override"),
   isActive: boolean("is_active").notNull().default(true),
+  // Hidden from the active speaking-recency list (e.g. won't/can't speak).
+  // Distinct from isActive (which is for roster removals). Reversible.
+  hidden: boolean("hidden").notNull().default(false),
   notes: text("notes"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()

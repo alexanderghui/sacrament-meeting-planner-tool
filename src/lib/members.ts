@@ -20,6 +20,7 @@ export type MemberRow = {
   birthdate: string | null;
   age: number | null;
   ageCategory: AgeCategory | null;
+  hidden: boolean;
   lastSpoke: string | null;
   daysSince: number | null;
   bucket: Bucket;
@@ -69,6 +70,7 @@ export async function getMembersWithSpeaking(): Promise<MemberRow[]> {
       email: members.email,
       birthdate: members.birthdate,
       ageCategoryOverride: members.ageCategoryOverride,
+      hidden: members.hidden,
       lastSpoke: sql<string | null>`max(${meetings.date})`,
       talkCount: sql<number>`count(${assignments.id})`,
     })
@@ -100,6 +102,7 @@ export async function getMembersWithSpeaking(): Promise<MemberRow[]> {
         birthdate: r.birthdate,
         age: ageFrom(r.birthdate),
         ageCategory: categoryFor(r.birthdate, r.ageCategoryOverride),
+        hidden: r.hidden,
         lastSpoke: r.lastSpoke,
         daysSince: days,
         bucket: bucketFor(days),

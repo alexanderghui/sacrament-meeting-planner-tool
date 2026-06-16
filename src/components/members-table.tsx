@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Search, ArrowUpDown, ChevronDown, Check, Pencil } from "lucide-react";
+import { Search, ArrowUpDown, ChevronDown, Check, Pencil, Eye, EyeOff } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -14,7 +14,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { BUCKET_LABEL, relativeLabel, type Bucket } from "@/lib/recency";
-import { setMemberGender, setMemberPreferredName } from "@/lib/actions";
+import { setMemberGender, setMemberPreferredName, setMemberHidden } from "@/lib/actions";
 import { displayName, primaryName, officialSubline } from "@/lib/names";
 import { cn } from "@/lib/utils";
 import type { MemberRow } from "@/lib/members";
@@ -189,6 +189,22 @@ export function MembersTable({ members }: { members: MemberRow[] }) {
     });
   }
 
+  const [hiddenEdits, setHiddenEdits] = useState<Record<string, boolean>>({});
+  const [showHidden, setShowHidden] = useState(false);
+  const effHidden = (m: MemberRow) =>
+    m.id in hiddenEdits ? hiddenEdits[m.id] : m.hidden;
+
+  function changeHidden(id: string, hidden: boolean) {
+    setHiddenEdits((p) => ({ ...p, [id]: hidden }));
+    startTransition(async () => {
+      try {
+        await setMemberHidden(id, hidden);
+      } catch {
+        router.refresh();
+      }
+    });
+  }
+
   const anyFilter =
     ageSet.size < ALL_AGES.length ||
     genderSet.size < ALL_GENDERS.length ||
@@ -199,8 +215,15 @@ export function MembersTable({ members }: { members: MemberRow[] }) {
     setBucketSet(new Set());
   }
 
+  const hiddenCount = useMemo(
+    () => members.filter((m) => effHidden(m)).length,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [members, hiddenEdits]
+  );
+
   const rows = useMemo(() => {
-    let r = members;
+    // Hidden members are excluded from the recency view unless explicitly shown.
+    let r = showHidden ? members : members.filter((m) => !effHidden(m));
     const q = query.trim().toLowerCase();
     if (q)
       r = r.filter((m) => {
@@ -229,7 +252,7 @@ export function MembersTable({ members }: { members: MemberRow[] }) {
       return bv - av;
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [members, query, ageSet, genderSet, bucketSet, genderEdits, prefEdits, sort]);
+  }, [members, query, ageSet, genderSet, bucketSet, genderEdits, prefEdits, hiddenEdits, showHidden, sort]);
 
   function toggle<T>(
     setFn: React.Dispatch<React.SetStateAction<Set<T>>>,
@@ -320,9 +343,26 @@ export function MembersTable({ members }: { members: MemberRow[] }) {
         </div>
       </div>
 
-      <p className="text-sm text-muted-foreground">
-        {rows.length} of {members.length} members
-      </p>
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
+        <span>
+          {rows.length} of {members.length - hiddenCount} members
+        </span>
+        {hiddenCount > 0 && (
+          <button
+            type="button"
+            onClick={() => setShowHidden((s) => !s)}
+            aria-pressed={showHidden}
+            className="inline-flex items-center gap-1.5 rounded-sm text-[var(--link)] hover:text-[var(--link-hover)]"
+          >
+            {showHidden ? (
+              <Eye className="size-3.5" />
+            ) : (
+              <EyeOff className="size-3.5" />
+            )}
+            {showHidden ? "Hide hidden" : `Show ${hiddenCount} hidden`}
+          </button>
+        )}
+      </div>
 
       <div className="rounded-sm border border-[var(--grey15)] bg-card">
         <Table>
@@ -337,11 +377,14 @@ export function MembersTable({ members }: { members: MemberRow[] }) {
               <TableHead className="hidden lg:table-cell text-right">
                 Total talks
               </TableHead>
+              <TableHead className="w-10" aria-label="Actions" />
             </TableRow>
           </TableHeader>
           <TableBody>
-            {rows.map((m) => (
-              <TableRow key={m.id}>
+            {rows.map((m) => {
+              const isHidden = effHidden(m);
+              return (
+              <TableRow key={m.id} className={cn("group", isHidden && "opacity-55")}>
                 <TableCell className="font-normal text-foreground">
                   {editingId === m.id ? (
                     <div className="flex flex-col gap-1">
@@ -381,7 +424,14 @@ export function MembersTable({ members }: { members: MemberRow[] }) {
                   ) : (
                     <div className="group/name flex items-start gap-1.5">
                       <div className="flex flex-col">
-                        <span>{primaryName(m.fullName, effPreferred(m))}</span>
+                        <span className="flex items-center gap-1.5">
+                          {primaryName(m.fullName, effPreferred(m))}
+                          {isHidden && (
+                            <Badge variant="neutral" className="font-normal">
+                              Hidden
+                            </Badge>
+                          )}
+                        </span>
                         {officialSubline(m.fullName, effPreferred(m)) && (
                           <span className="text-xs text-muted-foreground">
                             {officialSubline(m.fullName, effPreferred(m))}
@@ -454,12 +504,35 @@ export function MembersTable({ members }: { members: MemberRow[] }) {
                 <TableCell className="hidden lg:table-cell text-right text-muted-foreground">
                   {m.talkCount}
                 </TableCell>
+                <TableCell className="w-10 pr-3 text-right">
+                  <button
+                    type="button"
+                    onClick={() => changeHidden(m.id, !isHidden)}
+                    aria-label={
+                      isHidden
+                        ? `Unhide ${displayName(m.fullName)}`
+                        : `Hide ${displayName(m.fullName)}`
+                    }
+                    title={isHidden ? "Show in list" : "Hide from list"}
+                    className={cn(
+                      "rounded-sm p-1 text-muted-foreground transition-opacity hover:text-foreground focus:opacity-100",
+                      isHidden ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                    )}
+                  >
+                    {isHidden ? (
+                      <Eye className="size-4" />
+                    ) : (
+                      <EyeOff className="size-4" />
+                    )}
+                  </button>
+                </TableCell>
               </TableRow>
-            ))}
+              );
+            })}
             {rows.length === 0 && (
               <TableRow className="hover:bg-transparent">
                 <TableCell
-                  colSpan={7}
+                  colSpan={8}
                   className="py-12 text-center text-muted-foreground"
                 >
                   No members match these filters.

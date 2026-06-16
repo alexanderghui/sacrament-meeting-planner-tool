@@ -60,6 +60,15 @@ export async function setMemberPreferredName(
   revalidatePath("/members");
 }
 
+export async function setMemberHidden(memberId: string, hidden: boolean) {
+  const db = await getDb();
+  await db
+    .update(members)
+    .set({ hidden, updatedAt: new Date() })
+    .where(eq(members.id, memberId));
+  revalidatePath("/members");
+}
+
 /* ----------------------------- auth ------------------------------ */
 
 export async function signInGoogle() {

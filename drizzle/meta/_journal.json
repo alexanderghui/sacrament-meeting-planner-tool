@@ -64,6 +64,13 @@
       "when": 1781629058403,
       "tag": "0008_chunky_changeling",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1781631827926,
+      "tag": "0009_curious_blue_shield",
+      "breakpoints": true
     }
   ]
 }
