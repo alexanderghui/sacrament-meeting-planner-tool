@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { getDb } from "./db";
 import { signIn, signOut, ensureUser } from "./auth";
 import { meetings, assignments, auditLog, members } from "./db/schema";
+import { primaryName } from "./names";
 import {
   firstSundayOnOrAfter,
   isoDate,
@@ -16,7 +17,7 @@ import type { DB } from "./db";
 
 type AuditEntry = {
   action: "created" | "updated" | "deleted";
-  entityType: "meeting" | "assignment";
+  entityType: "meeting" | "assignment" | "member";
   entityId: string;
   summary: string;
 };
@@ -31,7 +32,51 @@ async function recordAudit(db: DB, e: AuditEntry) {
     entityId: e.entityId,
     summary: e.summary,
   });
+  revalidatePath("/activity");
 }
+
+/* ----------------------- audit label helpers --------------------- */
+
+function fmtDate(iso: string): string {
+  return new Date(iso + "T00:00:00").toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+async function meetingLabel(db: DB, meetingId: string): Promise<string> {
+  const [m] = await db.select({ date: meetings.date }).from(meetings).where(eq(meetings.id, meetingId));
+  return m ? fmtDate(m.date) : "meeting";
+}
+async function memberLabel(db: DB, memberId: string): Promise<string> {
+  const [m] = await db
+    .select({ fullName: members.fullName, preferredName: members.preferredName })
+    .from(members)
+    .where(eq(members.id, memberId));
+  return m ? primaryName(m.fullName, m.preferredName) : "member";
+}
+async function selLabel(db: DB, sel: SpeakerInput): Promise<string> {
+  if (!sel) return "(none)";
+  if (sel.memberId) return memberLabel(db, sel.memberId);
+  return sel.guestName?.trim() || "guest";
+}
+const ROLE_LABEL: Record<string, string> = {
+  opening_prayer: "opening prayer",
+  closing_prayer: "closing prayer",
+};
+const FIELD_LABEL: Record<string, string> = {
+  conducting: "conducting",
+  presiding: "presiding",
+  chorister: "chorister",
+  accompanist: "pianist/organist",
+  musicalNumber: "musical number",
+  theme: "theme",
+  notes: "notes",
+  openingHymn: "opening hymn",
+  sacramentHymn: "sacrament hymn",
+  intermediateHymn: "intermediate hymn",
+  closingHymn: "closing hymn",
+};
 
 /* ---------------------------- members ---------------------------- */
 
@@ -44,6 +89,12 @@ export async function setMemberGender(
     .update(members)
     .set({ gender, updatedAt: new Date() })
     .where(eq(members.id, memberId));
+  await recordAudit(db, {
+    action: "updated",
+    entityType: "member",
+    entityId: memberId,
+    summary: `Set gender to ${gender ?? "—"} for ${await memberLabel(db, memberId)}`,
+  });
   revalidatePath("/members");
 }
 
@@ -57,6 +108,13 @@ export async function setMemberPreferredName(
     .update(members)
     .set({ preferredName: clean, updatedAt: new Date() })
     .where(eq(members.id, memberId));
+  const who = await memberLabel(db, memberId);
+  await recordAudit(db, {
+    action: "updated",
+    entityType: "member",
+    entityId: memberId,
+    summary: clean ? `Set preferred name "${clean}" for ${who}` : `Cleared preferred name for ${who}`,
+  });
   revalidatePath("/members");
 }
 
@@ -66,6 +124,13 @@ export async function setMemberHidden(memberId: string, hidden: boolean) {
     .update(members)
     .set({ hidden, updatedAt: new Date() })
     .where(eq(members.id, memberId));
+  const who = await memberLabel(db, memberId);
+  await recordAudit(db, {
+    action: "updated",
+    entityType: "member",
+    entityId: memberId,
+    summary: hidden ? `Hid ${who} from the members list` : `Unhid ${who}`,
+  });
   revalidatePath("/members");
 }
 
@@ -87,6 +152,7 @@ function revalidatePlanner() {
   revalidatePath("/upcoming");
   revalidatePath("/members");
   revalidatePath("/history");
+  revalidatePath("/activity");
 }
 
 const MEETING_TEXT_FIELDS = ["conducting", "presiding", "chorister", "accompanist", "musicalNumber", "theme", "notes"] as const;
@@ -127,7 +193,7 @@ export async function addUpcomingSunday() {
     action: "created",
     entityType: "meeting",
     entityId: row.id,
-    summary: `Added Sunday ${date}`,
+    summary: `Added Sunday ${fmtDate(date)}`,
   });
   revalidatePlanner();
 }
@@ -143,7 +209,7 @@ export async function removeMeeting(meetingId: string) {
       action: "deleted",
       entityType: "meeting",
       entityId: meetingId,
-      summary: `Removed Sunday ${row.date}`,
+      summary: `Removed Sunday ${fmtDate(row.date)}`,
     });
   }
   revalidatePlanner();
@@ -162,7 +228,7 @@ export async function updateMeetingType(
     action: "updated",
     entityType: "meeting",
     entityId: meetingId,
-    summary: `Set meeting type to ${type}`,
+    summary: `Set meeting type to ${type.replace(/_/g, " ")} — ${await meetingLabel(db, meetingId)}`,
   });
   revalidatePlanner();
 }
@@ -174,10 +240,20 @@ export async function updateMeetingText(
 ) {
   if (!MEETING_TEXT_FIELDS.includes(field)) return;
   const db = await getDb();
+  const clean = value.trim() || null;
   await db
     .update(meetings)
-    .set({ [field]: value || null, updatedAt: new Date() })
+    .set({ [field]: clean, updatedAt: new Date() })
     .where(eq(meetings.id, meetingId));
+  const date = await meetingLabel(db, meetingId);
+  await recordAudit(db, {
+    action: "updated",
+    entityType: "meeting",
+    entityId: meetingId,
+    summary: clean
+      ? `Set ${FIELD_LABEL[field]} to "${clean}" — ${date}`
+      : `Cleared ${FIELD_LABEL[field]} — ${date}`,
+  });
   revalidatePlanner();
 }
 
@@ -192,6 +268,15 @@ export async function updateMeetingHymn(
     .update(meetings)
     .set({ [field]: value, updatedAt: new Date() })
     .where(eq(meetings.id, meetingId));
+  const date = await meetingLabel(db, meetingId);
+  await recordAudit(db, {
+    action: "updated",
+    entityType: "meeting",
+    entityId: meetingId,
+    summary: value != null
+      ? `Set ${FIELD_LABEL[field]} to #${value} — ${date}`
+      : `Cleared ${FIELD_LABEL[field]} — ${date}`,
+  });
   revalidatePlanner();
 }
 
@@ -210,8 +295,14 @@ export async function setSpeaker(
   const db = await getDb();
   const memberId = sel?.memberId ?? null;
   const guestName = !memberId ? sel?.guestName?.trim() || null : null;
+  const date = await meetingLabel(db, meetingId);
 
   if (!memberId && !guestName) {
+    // Removal — capture who was there first, so the trail names them.
+    const [existing] = await db
+      .select({ memberId: assignments.memberId, guestName: assignments.guestName })
+      .from(assignments)
+      .where(and(eq(assignments.meetingId, meetingId), eq(assignments.role, "speaker"), eq(assignments.position, position)));
     await db
       .delete(assignments)
       .where(
@@ -221,6 +312,15 @@ export async function setSpeaker(
           eq(assignments.position, position)
         )
       );
+    if (existing) {
+      const who = existing.memberId ? await memberLabel(db, existing.memberId) : existing.guestName;
+      await recordAudit(db, {
+        action: "deleted",
+        entityType: "assignment",
+        entityId: meetingId,
+        summary: `Removed ${who} as speaker ${position} — ${date}`,
+      });
+    }
     revalidatePlanner();
     return null;
   }
@@ -232,16 +332,37 @@ export async function setSpeaker(
       set: { memberId, guestName, updatedAt: new Date() },
     })
     .returning({ id: assignments.id, status: assignments.status });
+  await recordAudit(db, {
+    action: "updated",
+    entityType: "assignment",
+    entityId: row.id,
+    summary: `Set speaker ${position} to ${await selLabel(db, sel)} — ${date}`,
+  });
   revalidatePlanner();
   return { id: row.id, status: row.status as AssignmentStatusValue };
 }
 
 export async function setSpeakerTopic(assignmentId: string, topic: string) {
   const db = await getDb();
+  const clean = topic.trim() || null;
   await db
     .update(assignments)
-    .set({ topic: topic || null, updatedAt: new Date() })
+    .set({ topic: clean, updatedAt: new Date() })
     .where(eq(assignments.id, assignmentId));
+  const [a] = await db
+    .select({ meetingId: assignments.meetingId, memberId: assignments.memberId, guestName: assignments.guestName })
+    .from(assignments)
+    .where(eq(assignments.id, assignmentId));
+  if (a) {
+    const who = a.memberId ? await memberLabel(db, a.memberId) : a.guestName ?? "speaker";
+    const date = await meetingLabel(db, a.meetingId);
+    await recordAudit(db, {
+      action: "updated",
+      entityType: "assignment",
+      entityId: assignmentId,
+      summary: clean ? `Set ${who}'s topic to "${clean}" — ${date}` : `Cleared ${who}'s topic — ${date}`,
+    });
+  }
   revalidatePlanner();
 }
 
@@ -254,11 +375,17 @@ export async function setSpeakerStatus(
     .update(assignments)
     .set({ status, updatedAt: new Date() })
     .where(eq(assignments.id, assignmentId));
+  const [a] = await db
+    .select({ meetingId: assignments.meetingId, memberId: assignments.memberId, guestName: assignments.guestName })
+    .from(assignments)
+    .where(eq(assignments.id, assignmentId));
+  const who = a ? (a.memberId ? await memberLabel(db, a.memberId) : a.guestName ?? "speaker") : "speaker";
+  const date = a ? await meetingLabel(db, a.meetingId) : "";
   await recordAudit(db, {
     action: "updated",
     entityType: "assignment",
     entityId: assignmentId,
-    summary: `Marked speaker ${status}`,
+    summary: `Marked ${who} ${status} — ${date}`,
   });
   revalidatePlanner();
 }
@@ -271,8 +398,13 @@ export async function setPrayer(
   const db = await getDb();
   const memberId = sel?.memberId ?? null;
   const guestName = !memberId ? sel?.guestName?.trim() || null : null;
+  const date = await meetingLabel(db, meetingId);
 
   if (!memberId && !guestName) {
+    const [existing] = await db
+      .select({ memberId: assignments.memberId, guestName: assignments.guestName })
+      .from(assignments)
+      .where(and(eq(assignments.meetingId, meetingId), eq(assignments.role, role), eq(assignments.position, 1)));
     await db
       .delete(assignments)
       .where(
@@ -282,6 +414,15 @@ export async function setPrayer(
           eq(assignments.position, 1)
         )
       );
+    if (existing) {
+      const who = existing.memberId ? await memberLabel(db, existing.memberId) : existing.guestName;
+      await recordAudit(db, {
+        action: "deleted",
+        entityType: "assignment",
+        entityId: meetingId,
+        summary: `Removed ${who} as ${ROLE_LABEL[role]} — ${date}`,
+      });
+    }
   } else {
     await db
       .insert(assignments)
@@ -294,6 +435,12 @@ export async function setPrayer(
         ],
         set: { memberId, guestName, updatedAt: new Date() },
       });
+    await recordAudit(db, {
+      action: "updated",
+      entityType: "assignment",
+      entityId: meetingId,
+      summary: `Set ${ROLE_LABEL[role]} to ${await selLabel(db, sel)} — ${date}`,
+    });
   }
   revalidatePlanner();
 }

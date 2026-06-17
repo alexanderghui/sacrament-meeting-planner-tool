@@ -4,7 +4,7 @@ import { desc, eq, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { getDb } from "./db";
 import { ensureUser } from "./auth";
-import { members, rosterImports } from "./db/schema";
+import { members, rosterImports, auditLog } from "./db/schema";
 import {
   parseRosterCsv,
   diffRoster,
@@ -148,8 +148,22 @@ export async function applyRoster(
     })
     .returning({ id: rosterImports.id });
 
+  // Surface the import in the activity feed too (detailed diff lives in the
+  // roster version history; this is the one-line trail entry).
+  if (diff.adds.length + diff.updates.length + diff.removes.length > 0) {
+    await db.insert(auditLog).values({
+      userId: user?.id ?? null,
+      userEmail: user?.email ?? null,
+      action: "updated",
+      entityType: "roster",
+      entityId: row.id,
+      summary: `Imported roster${filename ? ` "${filename}"` : ""}: ${diff.adds.length} added, ${diff.updates.length} updated, ${diff.removes.length} removed`,
+    });
+  }
+
   revalidatePath("/members");
   revalidatePath("/members/import");
+  revalidatePath("/activity");
 
   return {
     ok: true,
