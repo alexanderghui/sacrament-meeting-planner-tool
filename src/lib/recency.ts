@@ -37,7 +37,7 @@ export const BUCKET_LABEL: Record<Bucket, string> = {
 // Foreground (text/dot) + background per bucket, via the status CSS variables.
 export const BUCKET_COLOR: Record<Bucket, { fg: string; bg: string }> = {
   red: { fg: "var(--status-red)", bg: "var(--status-red-bg)" },
-  neutral: { fg: "var(--status-neutral)", bg: "var(--status-neutral-bg)" },
+  neutral: { fg: "var(--status-orange)", bg: "var(--status-orange-bg)" },
   amber: { fg: "var(--status-amber)", bg: "var(--status-amber-bg)" },
   green: { fg: "var(--status-green)", bg: "var(--status-green-bg)" },
   over2: { fg: "var(--status-blue)", bg: "var(--status-blue-bg)" },
