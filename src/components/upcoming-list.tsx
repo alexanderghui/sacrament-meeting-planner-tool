@@ -24,8 +24,6 @@ export function UpcomingList({
     if (last && last.label === label) last.items.push(m);
     else groups.push({ label, items: [m] });
   }
-  const firstId = meetings[0]?.id;
-
   return (
     <div className="space-y-6">
       {groups.map((g) => (
@@ -35,12 +33,7 @@ export function UpcomingList({
           </div>
           <div className="space-y-3">
             {g.items.map((m) => (
-              <MeetingCard
-                key={m.id}
-                meeting={m}
-                members={members}
-                defaultExpanded={m.id === firstId}
-              />
+              <MeetingCard key={m.id} meeting={m} members={members} />
             ))}
           </div>
         </div>
