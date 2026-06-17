@@ -6,8 +6,7 @@ export type Bucket =
   | "neutral" // 3–6 months
   | "amber" // 6–12 months
   | "green" // 1–2 years
-  | "over2" // 2–3 years
-  | "over3" // over 3 years
+  | "over2" // over 2 years
   | "never"; // never spoken
 
 export function daysSince(date: string | null, today = new Date()): number | null {
@@ -23,8 +22,7 @@ export function bucketFor(days: number | null): Bucket {
   if (days < 182) return "neutral"; // 3–6 months
   if (days < 365) return "amber"; // 6–12 months
   if (days < 730) return "green"; // 1–2 years
-  if (days < 1095) return "over2"; // 2–3 years
-  return "over3"; // over 3 years
+  return "over2"; // over 2 years
 }
 
 export const BUCKET_LABEL: Record<Bucket, string> = {
@@ -32,8 +30,7 @@ export const BUCKET_LABEL: Record<Bucket, string> = {
   neutral: "3–6 months",
   amber: "6–12 months",
   green: "1–2 years",
-  over2: "2–3 years",
-  over3: "Over 3 years",
+  over2: "Over 2 years",
   never: "Never spoken",
 };
 
@@ -44,14 +41,12 @@ export const BUCKET_COLOR: Record<Bucket, { fg: string; bg: string }> = {
   amber: { fg: "var(--status-amber)", bg: "var(--status-amber-bg)" },
   green: { fg: "var(--status-green)", bg: "var(--status-green-bg)" },
   over2: { fg: "var(--status-blue)", bg: "var(--status-blue-bg)" },
-  over3: { fg: "var(--status-violet)", bg: "var(--status-violet-bg)" },
   never: { fg: "var(--status-never)", bg: "var(--status-never-bg)" },
 };
 
 // Most-overdue first — the order the recency filter pills are shown in.
 export const BUCKET_ORDER: Bucket[] = [
   "never",
-  "over3",
   "over2",
   "green",
   "amber",
