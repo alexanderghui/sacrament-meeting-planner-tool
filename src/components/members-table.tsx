@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Search, ArrowUpDown, ChevronDown, Check, Pencil, Eye, EyeOff } from "lucide-react";
+import { Search, ArrowUpDown, ChevronDown, ChevronUp, Check, Pencil, Eye, EyeOff } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -39,7 +39,19 @@ const GENDER_OPTIONS: { value: "M" | "F"; label: string }[] = [
 ];
 const ALL_GENDERS: ("M" | "F")[] = GENDER_OPTIONS.map((o) => o.value);
 
-type Sort = "recency" | "name";
+type SortCol = "name" | "household" | "gender" | "age" | "lastSpoke" | "recency" | "talks";
+type SortState = { col: SortCol; dir: "asc" | "desc" };
+// The direction a column sorts on its FIRST click (second click reverses).
+const DEFAULT_DIR: Record<SortCol, "asc" | "desc"> = {
+  name: "asc", // A→Z
+  household: "asc", // A→Z
+  gender: "asc",
+  age: "asc", // primary → youth → adult
+  lastSpoke: "desc", // most recent talk first
+  recency: "desc", // longest since speaking first (most overdue)
+  talks: "desc", // most talks first
+};
+const AGE_RANK: Record<string, number> = { primary: 0, youth: 1, adult: 2 };
 
 /** Dropdown of checkboxes — all checked = show all; uncheck to filter out. */
 function MultiSelect<T extends string>({
@@ -130,7 +142,38 @@ export function MembersTable({ members }: { members: MemberRow[] }) {
   const [ageSet, setAgeSet] = useState<Set<AgeCat>>(new Set(ALL_AGES));
   const [genderSet, setGenderSet] = useState<Set<"M" | "F">>(new Set(ALL_GENDERS));
   const [bucketSet, setBucketSet] = useState<Set<Bucket>>(new Set());
-  const [sort, setSort] = useState<Sort>("recency");
+  const [sort, setSort] = useState<SortState>({ col: "recency", dir: "desc" });
+  function onSort(col: SortCol) {
+    setSort((s) =>
+      s.col === col
+        ? { col, dir: s.dir === "asc" ? "desc" : "asc" }
+        : { col, dir: DEFAULT_DIR[col] }
+    );
+  }
+  const sortHead = (col: SortCol, label: string, className?: string) => {
+    const active = sort.col === col;
+    return (
+      <TableHead className={className}>
+        <button
+          type="button"
+          onClick={() => onSort(col)}
+          aria-label={`Sort by ${label}`}
+          className="group inline-flex items-center gap-1 rounded-sm hover:text-foreground"
+        >
+          {label}
+          {active ? (
+            sort.dir === "asc" ? (
+              <ChevronUp className="size-3.5" />
+            ) : (
+              <ChevronDown className="size-3.5" />
+            )
+          ) : (
+            <ArrowUpDown className="size-3 opacity-0 transition-opacity group-hover:opacity-40" />
+          )}
+        </button>
+      </TableHead>
+    );
+  };
   const [genderEdits, setGenderEdits] = useState<Record<string, "M" | "F" | null>>({});
   const [prefEdits, setPrefEdits] = useState<Record<string, string | null>>({});
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -224,11 +267,19 @@ export function MembersTable({ members }: { members: MemberRow[] }) {
     if (bucketSet.size) r = r.filter((m) => bucketSet.has(m.bucket));
 
     return [...r].sort((a, b) => {
-      if (sort === "name")
-        return displayName(a.fullName).localeCompare(displayName(b.fullName));
-      const av = a.daysSince ?? Number.POSITIVE_INFINITY;
-      const bv = b.daysSince ?? Number.POSITIVE_INFINITY;
-      return bv - av;
+      let c = 0;
+      switch (sort.col) {
+        case "name": c = a.displayName.localeCompare(b.displayName); break;
+        case "household": c = (a.household ?? "").localeCompare(b.household ?? ""); break;
+        case "gender": c = (effGender(a) ?? "~").localeCompare(effGender(b) ?? "~"); break;
+        case "age": c = (AGE_RANK[a.ageCategory ?? ""] ?? 9) - (AGE_RANK[b.ageCategory ?? ""] ?? 9); break;
+        case "lastSpoke": c = (a.lastSpoke ?? "").localeCompare(b.lastSpoke ?? ""); break;
+        case "recency": c = (a.daysSince ?? Number.POSITIVE_INFINITY) - (b.daysSince ?? Number.POSITIVE_INFINITY); break;
+        case "talks": c = a.talkCount - b.talkCount; break;
+      }
+      if (sort.dir === "desc") c = -c;
+      // Stable tiebreak by official name so equal rows keep a consistent order.
+      return c !== 0 ? c : displayName(a.fullName).localeCompare(displayName(b.fullName));
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [members, query, ageSet, genderSet, bucketSet, genderEdits, prefEdits, hiddenEdits, showHidden, sort]);
@@ -274,14 +325,6 @@ export function MembersTable({ members }: { members: MemberRow[] }) {
               selected={genderSet}
               onToggle={(v) => toggle(setGenderSet, v)}
             />
-            <button
-              type="button"
-              onClick={() => setSort(sort === "recency" ? "name" : "recency")}
-              className="inline-flex h-10 shrink-0 items-center gap-2 rounded-sm border border-input bg-background px-3 text-sm text-foreground transition-colors hover:bg-accent"
-            >
-              <ArrowUpDown className="size-4" />
-              Sort: {sort === "recency" ? "Most overdue" : "Name"}
-            </button>
           </div>
         </div>
 
@@ -347,15 +390,13 @@ export function MembersTable({ members }: { members: MemberRow[] }) {
         <Table>
           <TableHeader>
             <TableRow className="hover:bg-transparent">
-              <TableHead>Name</TableHead>
-              <TableHead className="hidden sm:table-cell">Household</TableHead>
-              <TableHead>Gender</TableHead>
-              <TableHead className="hidden md:table-cell">Age</TableHead>
-              <TableHead>Last spoke</TableHead>
-              <TableHead>Recency</TableHead>
-              <TableHead className="hidden lg:table-cell text-right">
-                Total talks
-              </TableHead>
+              {sortHead("name", "Name")}
+              {sortHead("household", "Household", "hidden sm:table-cell")}
+              {sortHead("gender", "Gender")}
+              {sortHead("age", "Age", "hidden md:table-cell")}
+              {sortHead("lastSpoke", "Last spoke")}
+              {sortHead("recency", "Recency")}
+              {sortHead("talks", "Total talks", "hidden lg:table-cell text-right")}
               <TableHead className="w-10" aria-label="Actions" />
             </TableRow>
           </TableHeader>
