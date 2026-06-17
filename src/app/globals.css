@@ -38,6 +38,12 @@
   --status-red-bg: #fbe4ee;
   --status-neutral: #53575b;
   --status-neutral-bg: #eff0f0;
+  --status-blue: #185fa5;
+  --status-blue-bg: #e6f1fb;
+  --status-violet: #534ab7;
+  --status-violet-bg: #eeedfe;
+  --status-never: #3c3489;
+  --status-never-bg: #cecbf6;
 
   /* Church shadows */
   --boxShadowRaised: 0 2px 4px 0 rgba(0, 0, 0, 0.2);

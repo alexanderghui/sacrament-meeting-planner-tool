@@ -13,38 +13,17 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { BUCKET_LABEL, relativeLabel, type Bucket } from "@/lib/recency";
+import {
+  BUCKET_LABEL,
+  BUCKET_COLOR,
+  BUCKET_ORDER,
+  relativeLabel,
+  type Bucket,
+} from "@/lib/recency";
 import { setMemberGender, setMemberPreferredName, setMemberHidden } from "@/lib/actions";
 import { displayName, primaryName, officialSubline } from "@/lib/names";
 import { cn } from "@/lib/utils";
 import type { MemberRow } from "@/lib/members";
-
-const BUCKET_BADGE: Record<Bucket, "red" | "neutral" | "amber" | "green"> = {
-  red: "red",
-  neutral: "neutral",
-  amber: "amber",
-  green: "green",
-};
-
-const BUCKET_DOT: Record<Bucket, string> = {
-  red: "var(--status-red)",
-  neutral: "var(--status-neutral)",
-  amber: "var(--status-amber)",
-  green: "var(--status-green)",
-};
-
-// Color-coded recency filter pills — the page's primary dimension. Multi-select.
-const RECENCY_PILLS: {
-  value: Bucket;
-  label: string;
-  dot: string;
-  active: string;
-}[] = [
-  { value: "green", label: "Over a year / never", dot: "var(--status-green)", active: "bg-[var(--status-green-bg)] text-[var(--status-green)]" },
-  { value: "amber", label: "6–12 mo", dot: "var(--status-amber)", active: "bg-[var(--status-amber-bg)] text-[var(--status-amber)]" },
-  { value: "neutral", label: "3–6 mo", dot: "var(--status-neutral)", active: "bg-[var(--status-neutral-bg)] text-[var(--status-neutral)]" },
-  { value: "red", label: "Under 3 mo", dot: "var(--status-red)", active: "bg-[var(--status-red-bg)] text-[var(--status-red)]" },
-];
 
 type AgeCat = "adult" | "youth" | "primary";
 const AGE_OPTIONS: { value: AgeCat; label: string }[] = [
@@ -308,26 +287,26 @@ export function MembersTable({ members }: { members: MemberRow[] }) {
 
         {/* Recency filter — color-coded, the page's primary dimension. Multi-select. */}
         <div className="flex flex-wrap items-center gap-1.5">
-          {RECENCY_PILLS.map((p) => {
-            const on = bucketSet.has(p.value);
+          {BUCKET_ORDER.map((b) => {
+            const on = bucketSet.has(b);
+            const color = BUCKET_COLOR[b];
             return (
               <button
-                key={p.value}
+                key={b}
                 type="button"
-                onClick={() => toggle(setBucketSet, p.value)}
+                onClick={() => toggle(setBucketSet, b)}
                 aria-pressed={on}
                 className={cn(
                   "inline-flex items-center gap-1.5 rounded-sm px-3 py-1.5 text-sm transition-colors",
-                  on
-                    ? p.active
-                    : "bg-secondary text-muted-foreground hover:bg-accent hover:text-foreground"
+                  !on && "bg-secondary text-muted-foreground hover:bg-accent hover:text-foreground"
                 )}
+                style={on ? { backgroundColor: color.bg, color: color.fg } : undefined}
               >
                 <span
                   className="size-2 rounded-full"
-                  style={{ backgroundColor: p.dot }}
+                  style={{ backgroundColor: color.fg }}
                 />
-                {p.label}
+                {BUCKET_LABEL[b]}
               </button>
             );
           })}
@@ -493,13 +472,19 @@ export function MembersTable({ members }: { members: MemberRow[] }) {
                   </div>
                 </TableCell>
                 <TableCell>
-                  <Badge variant={BUCKET_BADGE[m.bucket]}>
+                  <span
+                    className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-sm px-2 py-0.5 text-xs font-medium"
+                    style={{
+                      backgroundColor: BUCKET_COLOR[m.bucket].bg,
+                      color: BUCKET_COLOR[m.bucket].fg,
+                    }}
+                  >
                     <span
                       className="size-2 rounded-full"
-                      style={{ backgroundColor: BUCKET_DOT[m.bucket] }}
+                      style={{ backgroundColor: BUCKET_COLOR[m.bucket].fg }}
                     />
                     {BUCKET_LABEL[m.bucket]}
-                  </Badge>
+                  </span>
                 </TableCell>
                 <TableCell className="hidden lg:table-cell text-right text-muted-foreground">
                   {m.talkCount}
