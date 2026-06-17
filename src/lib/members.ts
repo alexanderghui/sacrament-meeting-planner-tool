@@ -1,4 +1,4 @@
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, lte, sql } from "drizzle-orm";
 import { getDb } from "./db";
 import { members, assignments, meetings } from "./db/schema";
 import { bucketFor, daysSince, type Bucket } from "./recency";
@@ -59,6 +59,8 @@ function categoryFor(
 
 export async function getMembersWithSpeaking(): Promise<MemberRow[]> {
   const db = await getDb();
+  const now = new Date();
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
   const rows = await db
     .select({
       id: members.id,
@@ -72,17 +74,22 @@ export async function getMembersWithSpeaking(): Promise<MemberRow[]> {
       ageCategoryOverride: members.ageCategoryOverride,
       hidden: members.hidden,
       lastSpoke: sql<string | null>`max(${meetings.date})`,
-      talkCount: sql<number>`count(${assignments.id})`,
+      talkCount: sql<number>`count(${meetings.id})`,
     })
     .from(members)
+    // Recency counts ONLY speaker assignments (not prayers/music/conducting)...
     .leftJoin(
       assignments,
       and(
         eq(assignments.memberId, members.id),
-        eq(assignments.status, "spoke")
+        eq(assignments.role, "speaker")
       )
     )
-    .leftJoin(meetings, eq(meetings.id, assignments.meetingId))
+    // ...on meetings that have actually happened (exclude upcoming assignments).
+    .leftJoin(
+      meetings,
+      and(eq(meetings.id, assignments.meetingId), lte(meetings.date, today))
+    )
     .where(eq(members.isActive, true))
     .groupBy(members.id);
 
