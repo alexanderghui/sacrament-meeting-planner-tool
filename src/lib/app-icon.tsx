@@ -16,21 +16,13 @@ export function AppIcon(): ReactElement {
         background: "linear-gradient(135deg, #006184 0%, #003057 100%)",
       }}
     >
-      <svg width="62%" height="62%" viewBox="0 0 100 100">
+      <svg width="64%" height="64%" viewBox="0 0 100 100">
+        {/* wide reading desk / lectern top (the hero, front-on) */}
+        <rect x="22" y="22" width="56" height="11" rx="4" fill="#ffffff" />
+        {/* solid pedestal tapering gently to a modest foot */}
+        <polygon points="33,34 67,34 61,80 39,80" fill="#ffffff" />
         {/* base */}
-        <rect x="26" y="84" width="40" height="6" rx="3" fill="#ffffff" />
-        {/* podium body with a slanted reading top */}
-        <polygon points="30,56 62,50 56,84 36,84" fill="#ffffff" />
-        {/* microphone gooseneck */}
-        <path
-          d="M58,52 C67,49 73,42 73,30"
-          fill="none"
-          stroke="#ffffff"
-          strokeWidth="3"
-          strokeLinecap="round"
-        />
-        {/* microphone head */}
-        <rect x="68" y="12" width="9" height="19" rx="4.5" fill="#ffffff" />
+        <rect x="34" y="80" width="32" height="6" rx="3" fill="#ffffff" />
       </svg>
     </div>
   );

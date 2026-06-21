@@ -43,9 +43,10 @@ export function AppHeader({ userName }: { userName?: string | null }) {
           }}
         />
 
-        {/* Decorative blue rays design — desktop only. On phones it's hidden so
-            the wordmark sits on white (no overlap) right after the blue accent. */}
-        <div className="hidden sm:block absolute left-[42px] top-0 bottom-0 sm:w-48 overflow-hidden">
+        {/* Decorative blue rays design — narrower on phones; full width from sm
+            up. The wordmark wraps to two lines on phones and sits over the
+            lighter right edge of the rays so it stays readable (no overlap). */}
+        <div className="absolute left-[42px] top-0 bottom-0 w-28 sm:w-48 overflow-hidden">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="https://account.churchofjesuschrist.org/images/blueRays.svg"
@@ -60,9 +61,10 @@ export function AppHeader({ userName }: { userName?: string | null }) {
           <div className="flex items-center justify-between h-full">
             <Link
               href="/upcoming"
-              className="relative z-10 ml-[52px] sm:ml-[90px] min-w-0 truncate text-base sm:text-[1.5rem] font-light text-foreground leading-tight"
+              className="relative z-10 ml-[96px] sm:ml-[90px] shrink-0 text-base sm:text-[1.5rem] font-light leading-[1.05] sm:leading-tight text-foreground"
             >
-              Sacrament Planner
+              <span className="block sm:inline">Sacrament</span>{" "}
+              <span className="block sm:inline">Planner</span>
             </Link>
 
             <nav className="flex shrink-0 items-center gap-0.5 sm:gap-1">
@@ -74,7 +76,7 @@ export function AppHeader({ userName }: { userName?: string | null }) {
                     key={href}
                     href={href}
                     className={cn(
-                      "flex items-center justify-center gap-2 min-h-[44px] md:min-h-0 px-2 sm:px-3 py-2 rounded-sm text-sm font-normal transition-colors",
+                      "flex items-center justify-center gap-2 min-h-[44px] md:min-h-0 px-1.5 sm:px-3 py-2 rounded-sm text-sm font-normal transition-colors",
                       active
                         ? "bg-accent text-foreground"
                         : "text-muted-foreground hover:text-foreground hover:bg-accent"
@@ -93,7 +95,7 @@ export function AppHeader({ userName }: { userName?: string | null }) {
               <form action={signOutAction}>
                 <button
                   type="submit"
-                  className="flex items-center justify-center gap-2 min-h-[44px] md:min-h-0 px-2 sm:px-3 py-2 rounded-sm text-sm font-normal text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+                  className="flex items-center justify-center gap-2 min-h-[44px] md:min-h-0 px-1.5 sm:px-3 py-2 rounded-sm text-sm font-normal text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
                   title="Sign out"
                 >
                   <LogOut className="w-4 h-4" />
