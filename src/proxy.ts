@@ -6,8 +6,10 @@ import { authConfig } from "@/lib/auth.config";
 export default NextAuth(authConfig).auth;
 
 export const config = {
-  // Run on all routes except Next internals, the auth API, and static assets.
+  // Run on all routes except Next internals, the auth API, the public app
+  // icons / manifest (so the home-screen icon loads without a session), and
+  // static assets.
   matcher: [
-    "/((?!api/auth|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
+    "/((?!api/auth|icon|apple-icon|manifest.webmanifest|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
   ],
 };
