@@ -124,6 +124,7 @@ async function loadAssignmentRows(db: DB, ids: string[]) {
       topic: assignments.topic,
       status: assignments.status,
       memberName: members.fullName,
+      memberPreferred: members.preferredName,
     })
     .from(assignments)
     .leftJoin(members, eq(members.id, assignments.memberId))
@@ -151,7 +152,9 @@ function assemble(
           id: r.id,
           memberId: r.memberId,
           guestName: r.guestName,
-          name: r.memberName ? displayName(r.memberName) : r.guestName,
+          name: r.memberName
+            ? primaryName(r.memberName, r.memberPreferred)
+            : r.guestName,
           position: r.position,
           topic: r.topic,
           status: r.status as AssignmentStatusValue,
@@ -164,7 +167,9 @@ function assemble(
       return {
         id: r.id,
         memberId: r.memberId,
-        name: r.memberName ? displayName(r.memberName) : r.guestName,
+        name: r.memberName
+          ? primaryName(r.memberName, r.memberPreferred)
+          : r.guestName,
       };
     };
 
