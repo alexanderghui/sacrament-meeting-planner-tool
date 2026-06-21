@@ -296,6 +296,148 @@ export function MembersTable({ members }: { members: MemberRow[] }) {
     });
   }
 
+  // ---- Per-row pieces shared between the desktop <Table> and mobile <Card>.
+  // Both renderers consume these so the inline business logic lives in one place.
+
+  // Name block: inline preferred-name editor, primary/official name, Hidden badge,
+  // and the pencil edit trigger. `editClassName` lets the mobile card always show
+  // the pencil (no hover) for touch.
+  const nameBlock = (m: MemberRow, editClassName: string) => {
+    const isHidden = effHidden(m);
+    if (editingId === m.id) {
+      return (
+        <div className="flex flex-col gap-1">
+          <label
+            htmlFor={`pref-${m.id}`}
+            className="text-[11px] font-medium text-muted-foreground"
+          >
+            Preferred name
+          </label>
+          <input
+            id={`pref-${m.id}`}
+            autoFocus
+            defaultValue={effPreferred(m) ?? ""}
+            placeholder="Name they go by"
+            aria-label={`Preferred name for ${displayName(m.fullName)}`}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") e.currentTarget.blur();
+              else if (e.key === "Escape") {
+                cancelEdit.current = true;
+                e.currentTarget.blur();
+              }
+            }}
+            onBlur={(e) => {
+              if (cancelEdit.current) {
+                cancelEdit.current = false;
+                setEditingId(null);
+                return;
+              }
+              savePreferred(m.id, e.target.value);
+            }}
+            className="w-44 rounded-sm border border-input bg-[var(--input-background)] px-2 py-1 text-sm outline-none focus-visible:border-[var(--blue30)] focus-visible:ring-2 focus-visible:ring-[var(--blue30)]/30"
+          />
+          <span className="text-xs text-muted-foreground">
+            Official: {displayName(m.fullName)}
+          </span>
+        </div>
+      );
+    }
+    return (
+      <div className="group/name flex items-start gap-1.5">
+        <div className="flex min-w-0 flex-col">
+          <span className="flex items-center gap-1.5">
+            {primaryName(m.fullName, effPreferred(m))}
+            {isHidden && (
+              <Badge variant="neutral" className="font-normal">
+                Hidden
+              </Badge>
+            )}
+          </span>
+          {officialSubline(m.fullName, effPreferred(m)) && (
+            <span className="text-xs text-muted-foreground">
+              {officialSubline(m.fullName, effPreferred(m))}
+            </span>
+          )}
+        </div>
+        <button
+          type="button"
+          onClick={() => setEditingId(m.id)}
+          aria-label={`Edit preferred name for ${displayName(m.fullName)}`}
+          className={cn(
+            "shrink-0 text-muted-foreground transition-opacity hover:text-foreground focus:opacity-100",
+            editClassName
+          )}
+        >
+          <Pencil className="size-3.5" />
+        </button>
+      </div>
+    );
+  };
+
+  // Inline gender <select>.
+  const genderControl = (m: MemberRow, className?: string) => (
+    <select
+      value={(m.id in genderEdits ? genderEdits[m.id] : m.gender) ?? ""}
+      onChange={(e) =>
+        changeGender(
+          m.id,
+          e.target.value === "" ? null : (e.target.value as "M" | "F")
+        )
+      }
+      aria-label={`Gender for ${m.displayName}`}
+      className={cn(
+        "rounded-sm border border-input bg-[var(--input-background)] px-1.5 py-1 text-sm outline-none focus-visible:border-[var(--blue30)] focus-visible:ring-2 focus-visible:ring-[var(--blue30)]/30",
+        className
+      )}
+    >
+      <option value="">—</option>
+      <option value="M">M</option>
+      <option value="F">F</option>
+    </select>
+  );
+
+  // Recency badge (BUCKET_COLOR/BUCKET_LABEL).
+  const recencyBadge = (m: MemberRow) => (
+    <span
+      className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-sm px-2 py-0.5 text-xs font-medium"
+      style={{
+        backgroundColor: BUCKET_COLOR[m.bucket].bg,
+        color: BUCKET_COLOR[m.bucket].fg,
+      }}
+    >
+      <span
+        className="size-2 rounded-full"
+        style={{ backgroundColor: BUCKET_COLOR[m.bucket].fg }}
+      />
+      {BUCKET_LABEL[m.bucket]}
+    </span>
+  );
+
+  // Hide / unhide toggle. `forceVisible` keeps it always tappable on mobile.
+  const hideButton = (m: MemberRow, forceVisible: boolean) => {
+    const isHidden = effHidden(m);
+    return (
+      <button
+        type="button"
+        onClick={() => changeHidden(m.id, !isHidden)}
+        aria-label={
+          isHidden
+            ? `Unhide ${displayName(m.fullName)}`
+            : `Hide ${displayName(m.fullName)}`
+        }
+        title={isHidden ? "Show in list" : "Hide from list"}
+        className={cn(
+          "rounded-sm p-1 text-muted-foreground transition-opacity hover:text-foreground focus:opacity-100",
+          forceVisible || isHidden
+            ? "opacity-100"
+            : "opacity-0 group-hover:opacity-100"
+        )}
+      >
+        {isHidden ? <Eye className="size-4" /> : <EyeOff className="size-4" />}
+      </button>
+    );
+  };
+
   return (
     <div className="space-y-4">
       {/* Controls */}
@@ -386,7 +528,8 @@ export function MembersTable({ members }: { members: MemberRow[] }) {
         )}
       </div>
 
-      <div className="rounded-sm border border-[var(--grey15)] bg-card">
+      {/* Desktop / tablet: the original sortable table, unchanged at sm+. */}
+      <div className="hidden rounded-sm border border-[var(--grey15)] bg-card sm:block">
         <Table>
           <TableHeader>
             <TableRow className="hover:bg-transparent">
@@ -406,93 +549,15 @@ export function MembersTable({ members }: { members: MemberRow[] }) {
               return (
               <TableRow key={m.id} className={cn("group", isHidden && "opacity-55")}>
                 <TableCell className="font-normal text-foreground">
-                  {editingId === m.id ? (
-                    <div className="flex flex-col gap-1">
-                      <label
-                        htmlFor={`pref-${m.id}`}
-                        className="text-[11px] font-medium text-muted-foreground"
-                      >
-                        Preferred name
-                      </label>
-                      <input
-                        id={`pref-${m.id}`}
-                        autoFocus
-                        defaultValue={effPreferred(m) ?? ""}
-                        placeholder="Name they go by"
-                        aria-label={`Preferred name for ${displayName(m.fullName)}`}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") e.currentTarget.blur();
-                          else if (e.key === "Escape") {
-                            cancelEdit.current = true;
-                            e.currentTarget.blur();
-                          }
-                        }}
-                        onBlur={(e) => {
-                          if (cancelEdit.current) {
-                            cancelEdit.current = false;
-                            setEditingId(null);
-                            return;
-                          }
-                          savePreferred(m.id, e.target.value);
-                        }}
-                        className="w-44 rounded-sm border border-input bg-[var(--input-background)] px-2 py-1 text-sm outline-none focus-visible:border-[var(--blue30)] focus-visible:ring-2 focus-visible:ring-[var(--blue30)]/30"
-                      />
-                      <span className="text-xs text-muted-foreground">
-                        Official: {displayName(m.fullName)}
-                      </span>
-                    </div>
-                  ) : (
-                    <div className="group/name flex items-start gap-1.5">
-                      <div className="flex flex-col">
-                        <span className="flex items-center gap-1.5">
-                          {primaryName(m.fullName, effPreferred(m))}
-                          {isHidden && (
-                            <Badge variant="neutral" className="font-normal">
-                              Hidden
-                            </Badge>
-                          )}
-                        </span>
-                        {officialSubline(m.fullName, effPreferred(m)) && (
-                          <span className="text-xs text-muted-foreground">
-                            {officialSubline(m.fullName, effPreferred(m))}
-                          </span>
-                        )}
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => setEditingId(m.id)}
-                        aria-label={`Edit preferred name for ${displayName(m.fullName)}`}
-                        className="mt-0.5 shrink-0 text-muted-foreground opacity-0 transition-opacity hover:text-foreground focus:opacity-100 group-hover/name:opacity-100"
-                      >
-                        <Pencil className="size-3.5" />
-                      </button>
-                    </div>
+                  {nameBlock(
+                    m,
+                    "mt-0.5 opacity-0 group-hover/name:opacity-100"
                   )}
                 </TableCell>
                 <TableCell className="hidden sm:table-cell text-muted-foreground">
                   {m.household ?? "—"}
                 </TableCell>
-                <TableCell>
-                  <select
-                    value={
-                      (m.id in genderEdits ? genderEdits[m.id] : m.gender) ?? ""
-                    }
-                    onChange={(e) =>
-                      changeGender(
-                        m.id,
-                        e.target.value === ""
-                          ? null
-                          : (e.target.value as "M" | "F")
-                      )
-                    }
-                    aria-label={`Gender for ${m.displayName}`}
-                    className="rounded-sm border border-input bg-[var(--input-background)] px-1.5 py-1 text-sm outline-none focus-visible:border-[var(--blue30)] focus-visible:ring-2 focus-visible:ring-[var(--blue30)]/30"
-                  >
-                    <option value="">—</option>
-                    <option value="M">M</option>
-                    <option value="F">F</option>
-                  </select>
-                </TableCell>
+                <TableCell>{genderControl(m)}</TableCell>
                 <TableCell className="hidden md:table-cell">
                   {m.ageCategory ? (
                     <Badge variant="outline" className="capitalize">
@@ -512,45 +577,12 @@ export function MembersTable({ members }: { members: MemberRow[] }) {
                     </span>
                   </div>
                 </TableCell>
-                <TableCell>
-                  <span
-                    className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-sm px-2 py-0.5 text-xs font-medium"
-                    style={{
-                      backgroundColor: BUCKET_COLOR[m.bucket].bg,
-                      color: BUCKET_COLOR[m.bucket].fg,
-                    }}
-                  >
-                    <span
-                      className="size-2 rounded-full"
-                      style={{ backgroundColor: BUCKET_COLOR[m.bucket].fg }}
-                    />
-                    {BUCKET_LABEL[m.bucket]}
-                  </span>
-                </TableCell>
+                <TableCell>{recencyBadge(m)}</TableCell>
                 <TableCell className="hidden lg:table-cell text-right text-muted-foreground">
                   {m.talkCount}
                 </TableCell>
                 <TableCell className="w-10 pr-3 text-right">
-                  <button
-                    type="button"
-                    onClick={() => changeHidden(m.id, !isHidden)}
-                    aria-label={
-                      isHidden
-                        ? `Unhide ${displayName(m.fullName)}`
-                        : `Hide ${displayName(m.fullName)}`
-                    }
-                    title={isHidden ? "Show in list" : "Hide from list"}
-                    className={cn(
-                      "rounded-sm p-1 text-muted-foreground transition-opacity hover:text-foreground focus:opacity-100",
-                      isHidden ? "opacity-100" : "opacity-0 group-hover:opacity-100"
-                    )}
-                  >
-                    {isHidden ? (
-                      <Eye className="size-4" />
-                    ) : (
-                      <EyeOff className="size-4" />
-                    )}
-                  </button>
+                  {hideButton(m, false)}
                 </TableCell>
               </TableRow>
               );
@@ -567,6 +599,60 @@ export function MembersTable({ members }: { members: MemberRow[] }) {
             )}
           </TableBody>
         </Table>
+      </div>
+
+      {/* Phone: stacked card list — same `rows`, same handlers, no horizontal scroll. */}
+      <div className="space-y-2.5 sm:hidden">
+        {rows.map((m) => {
+          const isHidden = effHidden(m);
+          return (
+            <div
+              key={m.id}
+              className={cn(
+                "rounded-sm border border-[var(--grey15)] bg-card p-3.5",
+                isHidden && "opacity-55"
+              )}
+            >
+              {/* Title row: name block (left) + prominent recency badge (right). */}
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  {nameBlock(m, "mt-0.5 -mr-1 p-1")}
+                </div>
+                <div className="shrink-0">{recencyBadge(m)}</div>
+              </div>
+
+              {/* Secondary line: last spoke + relative label + total talks. */}
+              <div className="mt-2 flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-sm">
+                <span className="text-foreground">{fmtDate(m.lastSpoke)}</span>
+                <span className="text-xs text-muted-foreground">
+                  {relativeLabel(m.daysSince)}
+                </span>
+                <span aria-hidden className="text-muted-foreground">
+                  ·
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  {m.talkCount} {m.talkCount === 1 ? "talk" : "talks"}
+                </span>
+              </div>
+
+              {/* Actions: gender select + hide toggle, all >=44px tap targets. */}
+              <div className="mt-3 flex items-center justify-between gap-3">
+                <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                  Gender
+                  {genderControl(m, "min-h-11 px-2 py-2")}
+                </label>
+                <span className="[&>button]:min-h-11 [&>button]:min-w-11 [&>button]:flex [&>button]:items-center [&>button]:justify-center">
+                  {hideButton(m, true)}
+                </span>
+              </div>
+            </div>
+          );
+        })}
+        {rows.length === 0 && (
+          <div className="rounded-sm border border-[var(--grey15)] bg-card py-12 text-center text-muted-foreground">
+            No members match these filters.
+          </div>
+        )}
       </div>
     </div>
   );

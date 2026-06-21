@@ -110,7 +110,7 @@ export function HistoryBrowser({
             setOpenId(null);
           }}
           placeholder="Search by speaker, topic, or date"
-          className="pl-9 pr-9"
+          className="pl-9 pr-9 max-sm:text-base"
         />
         {searching && (
           <button
@@ -136,7 +136,7 @@ export function HistoryBrowser({
                 setOpenId(null);
               }}
               className={cn(
-                "rounded-sm px-3 py-1.5 text-sm transition-colors",
+                "rounded-sm px-3.5 py-2 text-sm transition-colors sm:px-3 sm:py-1.5",
                 y === year
                   ? "bg-primary text-primary-foreground"
                   : "bg-secondary text-muted-foreground hover:bg-accent hover:text-foreground"
@@ -181,23 +181,25 @@ export function HistoryBrowser({
                         type="button"
                         onClick={() => toggle(m.id)}
                         aria-expanded={open}
-                        className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-[var(--grey2)]"
+                        className="grid w-full grid-cols-[1fr_auto] items-center gap-x-3 gap-y-1 px-4 py-3 text-left transition-colors hover:bg-[var(--grey2)] min-h-[44px] sm:flex sm:items-center"
                       >
-                        <span className="w-28 shrink-0 text-sm font-medium text-foreground sm:w-36">
+                        <span className="text-sm font-medium text-foreground sm:w-36 sm:shrink-0">
                           {fmtDate(m.date, searching)}
-                        </span>
-                        <Badge variant="outline" className="shrink-0">
-                          {TYPE_LABELS[m.type]}
-                        </Badge>
-                        <span className="flex-1 truncate text-sm text-muted-foreground">
-                          {names.length > 0 ? names.join(", ") : "—"}
                         </span>
                         <ChevronDown
                           className={cn(
-                            "size-4 shrink-0 text-muted-foreground transition-transform",
+                            "size-4 shrink-0 justify-self-end text-muted-foreground transition-transform sm:order-last",
                             open && "rotate-180"
                           )}
                         />
+                        <div className="col-span-2 flex min-w-0 items-center gap-2 sm:contents">
+                          <Badge variant="outline" className="shrink-0">
+                            {TYPE_LABELS[m.type]}
+                          </Badge>
+                          <span className="flex-1 truncate text-sm text-muted-foreground sm:order-none">
+                            {names.length > 0 ? names.join(", ") : "—"}
+                          </span>
+                        </div>
                       </button>
 
                       {open && (
@@ -212,7 +214,7 @@ export function HistoryBrowser({
                                 <button
                                   type="button"
                                   onClick={() => setEditId(null)}
-                                  className="inline-flex shrink-0 items-center gap-1.5 rounded-sm bg-white/70 px-2.5 py-1 font-medium hover:bg-white"
+                                  className="inline-flex shrink-0 items-center gap-1.5 rounded-sm bg-white/70 px-2.5 py-1 font-medium hover:bg-white max-sm:min-h-[40px] max-sm:px-3"
                                 >
                                   <Check className="size-4" /> Done
                                 </button>
@@ -229,7 +231,7 @@ export function HistoryBrowser({
                                 <button
                                   type="button"
                                   onClick={() => setEditId(m.id)}
-                                  className="inline-flex items-center gap-1.5 rounded-sm px-2 py-1 text-sm text-[var(--link)] hover:text-[var(--link-hover)]"
+                                  className="inline-flex items-center gap-1.5 rounded-sm px-2 py-1 text-sm text-[var(--link)] hover:text-[var(--link-hover)] max-sm:min-h-[44px] max-sm:px-3"
                                 >
                                   <Pencil className="size-3.5" /> Correct
                                 </button>

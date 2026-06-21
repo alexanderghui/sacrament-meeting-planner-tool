@@ -136,6 +136,37 @@
   }
 }
 
+/* iOS / standalone-PWA foundation (global; phones, tablets, home-screen app). */
+html {
+  /* Stop iOS from auto-enlarging text in landscape / standalone. */
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  /* Calm rubber-band overscroll in the standalone home-screen app. */
+  overscroll-behavior-y: contain;
+}
+
+/* Kill the grey tap-flash on iOS without breaking focus-visible outlines. */
+a,
+button,
+[role="button"],
+input,
+select,
+textarea {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Prevent iOS focus-zoom on small screens: inline table controls use 14px
+   text and trigger zoom-on-tap. Bump font-size only — never padding/height. */
+@media (max-width: 640px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
 /* The standalone conducting agenda prints as a clean white document. */
 @media print {
   body {

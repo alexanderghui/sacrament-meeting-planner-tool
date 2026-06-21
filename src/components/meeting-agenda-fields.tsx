@@ -27,7 +27,7 @@ function RemoveButton({ onClick }: { onClick: () => void }) {
       type="button"
       onClick={onClick}
       aria-label="Remove"
-      className="mt-1 flex size-8 shrink-0 items-center justify-center rounded-sm text-muted-foreground transition-colors hover:bg-[var(--status-red-bg)] hover:text-[var(--status-red)]"
+      className="mt-1 flex size-11 shrink-0 items-center justify-center rounded-sm text-muted-foreground transition-colors hover:bg-[var(--status-red-bg)] hover:text-[var(--status-red)] sm:size-8"
     >
       <X className="size-4" />
     </button>
@@ -65,7 +65,7 @@ function StringListEditor({
       {items.map((val, i) => (
         <div key={i} className="flex items-start gap-2">
           {numbered && (
-            <span className="mt-2 w-4 shrink-0 text-right text-sm tabular-nums text-muted-foreground">
+            <span className="mt-2.5 w-5 shrink-0 text-right text-sm tabular-nums text-muted-foreground">
               {i + 1}.
             </span>
           )}
@@ -91,6 +91,7 @@ function StringListEditor({
         type="button"
         variant="outline"
         size="sm"
+        className="min-h-[44px] sm:min-h-8"
         onClick={() => setItems((arr) => [...arr, ""])}
       >
         <Plus className="size-4" />
@@ -143,6 +144,7 @@ function RosterListEditor({
         type="button"
         variant="outline"
         size="sm"
+        className="min-h-[44px] sm:min-h-8"
         onClick={() => setItems((arr) => [...arr, { name: "", calling: "" }])}
       >
         <Plus className="size-4" />
@@ -219,7 +221,7 @@ export function MeetingAgendaFields({
         <button
           type="button"
           onClick={() => setShowBusiness((v) => !v)}
-          className="flex items-center gap-2 text-sm font-semibold text-foreground"
+          className="-my-2 flex min-h-[44px] items-center gap-2 py-2 text-sm font-semibold text-foreground sm:my-0 sm:min-h-0 sm:py-0"
           aria-expanded={showBusiness}
         >
           <ClipboardList className="size-4 text-[var(--blue30)]" />

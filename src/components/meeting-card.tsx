@@ -190,7 +190,7 @@ export function MeetingCard({
         <button
           type="button"
           onClick={() => setExpanded((e) => !e)}
-          className="flex flex-1 items-center justify-between gap-3 px-6 py-4 text-left transition-colors hover:bg-[var(--grey2)]"
+          className="flex min-h-[44px] flex-1 items-center justify-between gap-3 px-4 py-4 text-left transition-colors hover:bg-[var(--grey2)] sm:px-6"
           aria-expanded={expanded}
         >
           <div className="min-w-0">
@@ -230,7 +230,7 @@ export function MeetingCard({
           rel="noopener noreferrer"
           title="Open program in a new tab"
           aria-label="Open program in a new tab"
-          className="flex shrink-0 items-center border-l border-[var(--grey10)] px-4 text-muted-foreground transition-colors hover:bg-[var(--grey2)] hover:text-[var(--blue30)]"
+          className="flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center border-l border-[var(--grey10)] px-4 text-muted-foreground transition-colors hover:bg-[var(--grey2)] hover:text-[var(--blue30)]"
         >
           <FileText className="size-5" />
         </a>
@@ -262,7 +262,10 @@ export function MeetingCard({
               href={`/program/${meeting.id}`}
               target="_blank"
               rel="noopener noreferrer"
-              className={cn(buttonVariants({ size: "default" }))}
+              className={cn(
+                buttonVariants({ size: "default" }),
+                "min-h-[44px] w-full sm:w-auto"
+              )}
             >
               <FileText className="size-4" />
               View program
@@ -469,7 +472,7 @@ export function MeetingCard({
             <Button
               variant="ghost"
               size="sm"
-              className="text-muted-foreground hover:bg-[var(--status-red-bg)] hover:text-[var(--status-red)]"
+              className="min-h-[44px] text-muted-foreground hover:bg-[var(--status-red-bg)] hover:text-[var(--status-red)] sm:min-h-8"
               onClick={() => {
                 if (confirm(`Remove ${formatDate(meeting.date)}?`))
                   run(() => removeMeeting(meeting.id));
@@ -497,7 +500,7 @@ function StatusControl({
   return (
     <div
       className={cn(
-        "inline-flex overflow-hidden rounded-sm border border-input",
+        "inline-flex w-full overflow-hidden rounded-sm border border-input sm:w-auto",
         disabled && "opacity-40"
       )}
     >
@@ -510,7 +513,7 @@ function StatusControl({
             disabled={disabled}
             onClick={() => onChange(opt.value)}
             className={cn(
-              "px-2.5 py-1.5 text-xs transition-colors",
+              "flex-1 px-2.5 py-2.5 text-xs transition-colors sm:flex-none sm:py-1.5",
               i > 0 && "border-l border-input",
               active
                 ? "bg-primary text-primary-foreground"

@@ -57,7 +57,7 @@ export function RosterImport() {
               {applyResult.added} added · {applyResult.updated} updated ·{" "}
               {applyResult.removed} moved out. Saved as a new version.
             </p>
-            <div className="mt-4 flex gap-2">
+            <div className="mt-4 flex flex-wrap gap-2">
               <Button onClick={() => router.push("/members")}>
                 View members
               </Button>
@@ -187,16 +187,16 @@ export function RosterImport() {
                         {u.changes.map((c, i) => (
                           <li
                             key={i}
-                            className="flex items-center gap-1.5 text-muted-foreground"
+                            className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-muted-foreground"
                           >
                             <span className="text-xs uppercase tracking-wide">
                               {c.label}
                             </span>
-                            <span className="line-through">
+                            <span className="break-words line-through">
                               {c.before ?? "—"}
                             </span>
-                            <ArrowRight className="size-3" />
-                            <span className="text-foreground">{c.after}</span>
+                            <ArrowRight className="size-3 shrink-0" />
+                            <span className="break-words text-foreground">{c.after}</span>
                           </li>
                         ))}
                       </ul>

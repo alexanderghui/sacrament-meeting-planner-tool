@@ -68,9 +68,9 @@ export default async function ActivityPage() {
                 {g.items.map((e) => (
                   <div
                     key={e.id}
-                    className="flex items-start gap-3 border-b border-[var(--grey10)] px-5 py-3 last:border-b-0"
+                    className="flex items-start gap-2.5 border-b border-[var(--grey10)] px-4 py-3 last:border-b-0 sm:gap-3 sm:px-5"
                   >
-                    <span className="w-16 shrink-0 pt-0.5 text-xs text-muted-foreground">
+                    <span className="w-14 shrink-0 pt-0.5 text-xs text-muted-foreground sm:w-16">
                       {time(e.createdAt)}
                     </span>
                     <Badge
@@ -80,10 +80,10 @@ export default async function ActivityPage() {
                       {e.action}
                     </Badge>
                     <div className="min-w-0 flex-1">
-                      <span className="text-sm text-foreground">
+                      <span className="block break-words text-sm text-foreground">
                         {e.summary}
                       </span>
-                      <div className="text-xs text-muted-foreground">
+                      <div className="break-words text-xs text-muted-foreground">
                         {actor(e)} · {e.entityType}
                       </div>
                     </div>

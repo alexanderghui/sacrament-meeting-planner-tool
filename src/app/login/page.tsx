@@ -14,7 +14,10 @@ export default function LoginPage() {
       {/* Church header band */}
       <div className="relative h-2 bg-[var(--blue25)]" />
 
-      <div className="mx-auto flex min-h-[calc(100vh-0.5rem)] max-w-md flex-col justify-center px-6 py-12">
+      <div
+        className="mx-auto flex min-h-[calc(100vh-0.5rem)] max-w-md flex-col justify-center py-12 pl-[max(env(safe-area-inset-left),1.5rem)] pr-[max(env(safe-area-inset-right),1.5rem)]"
+        style={{ paddingBottom: "calc(3rem + env(safe-area-inset-bottom))" }}
+      >
         <div className="mb-8 text-center">
           <h1 className="text-3xl font-light text-foreground">
             Sacrament Planner
