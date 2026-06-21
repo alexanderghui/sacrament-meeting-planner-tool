@@ -1,18 +1,20 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useTransition } from "react";
 import {
   Search,
   ChevronDown,
   Pencil,
   Check,
   AlertTriangle,
+  ArchiveRestore,
   X,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { MeetingCard } from "@/components/meeting-card";
 import { MeetingProgram } from "@/components/meeting-program";
+import { unarchiveMeeting } from "@/lib/actions";
 import { cn } from "@/lib/utils";
 import type {
   PlannerMeeting,
@@ -63,6 +65,7 @@ export function HistoryBrowser({
   const [query, setQuery] = useState("");
   const [openId, setOpenId] = useState<string | null>(null);
   const [editId, setEditId] = useState<string | null>(null);
+  const [, startTransition] = useTransition();
 
   const q = query.trim().toLowerCase();
   const searching = q.length > 0;
@@ -196,6 +199,11 @@ export function HistoryBrowser({
                           <Badge variant="outline" className="shrink-0">
                             {TYPE_LABELS[m.type]}
                           </Badge>
+                          {m.archived && (
+                            <Badge variant="neutral" className="shrink-0">
+                              Archived
+                            </Badge>
+                          )}
                           <span className="flex-1 truncate text-sm text-muted-foreground sm:order-none">
                             {names.length > 0 ? names.join(", ") : "—"}
                           </span>
@@ -227,7 +235,23 @@ export function HistoryBrowser({
                             </div>
                           ) : (
                             <>
-                              <div className="mb-3 flex justify-end">
+                              <div className="mb-3 flex items-center justify-between gap-2">
+                                {m.archived ? (
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      startTransition(() =>
+                                        unarchiveMeeting(m.id)
+                                      )
+                                    }
+                                    className="inline-flex items-center gap-1.5 rounded-sm px-2 py-1 text-sm text-[var(--link)] hover:text-[var(--link-hover)] max-sm:min-h-[44px] max-sm:px-3"
+                                  >
+                                    <ArchiveRestore className="size-3.5" /> Move
+                                    back to Upcoming
+                                  </button>
+                                ) : (
+                                  <span />
+                                )}
                                 <button
                                   type="button"
                                   onClick={() => setEditId(m.id)}

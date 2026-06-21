@@ -9,7 +9,26 @@ import {
   HandHelping,
   ChevronDown,
   FileText,
+  GripVertical,
+  Archive,
 } from "lucide-react";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  arrayMove,
+  useSortable,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { Card } from "@/components/ui/card";
 import { Input, Select } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -26,10 +45,12 @@ import {
   setSpeakerTopic,
   setSpeakerStatus,
   setPrayer,
+  reorderSpeakers,
   updateMeetingType,
   updateMeetingText,
   updateMeetingHymn,
   removeMeeting,
+  archiveMeeting,
 } from "@/lib/actions";
 import type {
   PlannerMeeting,
@@ -56,7 +77,7 @@ const STATUS_OPTIONS: { value: AssignmentStatusValue; label: string }[] = [
   { value: "confirmed", label: "Confirmed" },
 ];
 
-const SPEAKER_POSITIONS = [1, 2, 3];
+const MAX_SPEAKERS = 3;
 const HYMN_FIELDS = [
   { key: "openingHymn", label: "Opening" },
   { key: "sacramentHymn", label: "Sacrament" },
@@ -78,6 +99,41 @@ function Label({ children }: { children: React.ReactNode }) {
     <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-muted-foreground">
       {children}
     </span>
+  );
+}
+
+// A speaker row that can be dragged by its grip handle to reorder. The handle
+// carries the drag listeners (and touch-action: none) so the comboboxes/inputs
+// stay fully interactive and the page still scrolls everywhere else.
+function SortableSpeakerRow({
+  id,
+  children,
+}: {
+  id: string;
+  children: React.ReactNode;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+    useSortable({ id });
+  return (
+    <div
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
+      className={cn(
+        "flex items-start gap-2",
+        isDragging && "relative z-10 opacity-80"
+      )}
+    >
+      <button
+        type="button"
+        aria-label="Drag to reorder speaker"
+        className="mt-1 flex size-9 shrink-0 cursor-grab touch-none items-center justify-center rounded-sm text-muted-foreground transition-colors hover:bg-[var(--grey2)] hover:text-foreground active:cursor-grabbing sm:size-8"
+        {...attributes}
+        {...listeners}
+      >
+        <GripVertical className="size-4" />
+      </button>
+      <div className="min-w-0 flex-1">{children}</div>
+    </div>
   );
 }
 
@@ -104,13 +160,17 @@ export function MeetingCard({
       }
     });
 
+  // Drag a speaker by its handle to reorder. PointerSensor covers mouse + touch;
+  // the small distance constraint lets taps/scrolls through until you clearly drag.
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
+
   const hasProgram = ["sacrament", "fast_and_testimony", "ward_conference"].includes(
     meeting.type
   );
   const hasSpeakers = ["sacrament", "ward_conference"].includes(meeting.type);
-
-  const speakerAt = (pos: number): SpeakerSlot | undefined =>
-    meeting.speakers.find((s) => s.position === pos);
 
   function patchSpeaker(pos: number, patch: Partial<SpeakerSlot>) {
     setMeeting((m) => {
@@ -164,6 +224,32 @@ export function MeetingCard({
     });
   }
 
+  function handleSpeakerDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const ordered = meeting.speakers
+      .filter((s) => s.name)
+      .sort((a, b) => a.position - b.position);
+    const from = ordered.findIndex((s) => s.id === active.id);
+    const to = ordered.findIndex((s) => s.id === over.id);
+    if (from < 0 || to < 0) return;
+    const moved = arrayMove(ordered, from, to).map((s, i) => ({
+      ...s,
+      position: i + 1,
+    }));
+    setMeeting((m) => ({
+      ...m,
+      speakers: m.speakers.map((s) => {
+        const r = moved.find((x) => x.id === s.id);
+        return r ? { ...s, position: r.position } : s;
+      }),
+    }));
+    const ids = moved.map((s) => s.id);
+    // Only persist once every row has a real id (freshly-added rows resolve fast).
+    if (!ids.some((id) => id.startsWith("tmp-")))
+      run(() => reorderSpeakers(meeting.id, ids));
+  }
+
   function pickPrayer(
     role: "opening_prayer" | "closing_prayer",
     sel: SpeakerSelection | null
@@ -177,11 +263,16 @@ export function MeetingCard({
     run(() => setPrayer(meeting.id, role, sel));
   }
 
-  const filled = meeting.speakers.filter((s) => s.name);
+  const filled = meeting.speakers
+    .filter((s) => s.name)
+    .sort((a, b) => a.position - b.position);
   const confirmedCount = filled.filter(
     (s) => s.status === "confirmed" || s.status === "spoke"
   ).length;
   const speakerPreview = filled.map((s) => s.name).join(", ");
+  const nextSpeakerPos = filled.length
+    ? Math.max(...filled.map((s) => s.position)) + 1
+    : 1;
 
   return (
     <Card className="overflow-hidden">
@@ -330,54 +421,78 @@ export function MeetingCard({
                 </div>
               </div>
 
-              {/* Speakers */}
+              {/* Speakers — drag the grip handle to reorder */}
               {hasSpeakers && (
                 <div>
                   <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-foreground">
                     <Mic className="size-4 text-[var(--blue30)]" /> Speakers
                   </div>
-                  <div className="space-y-3">
-                    {SPEAKER_POSITIONS.map((pos) => {
-                      const slot = speakerAt(pos);
-                      const ready = !!slot?.id && !slot.id.startsWith("tmp-");
-                      return (
-                        <div
-                          key={pos}
-                          className="grid gap-2 sm:grid-cols-[1fr_1fr_auto] sm:items-center"
-                        >
-                          <MemberCombobox
-                            members={members}
-                            value={slot?.memberId ?? null}
-                            guestName={slot?.memberId ? null : slot?.name ?? null}
-                            onChange={(sel) => onPickSpeaker(pos, sel)}
-                            placeholder={`Speaker ${pos}`}
-                            ariaLabel={`Speaker ${pos}`}
-                          />
-                          <Input
-                            defaultValue={slot?.topic ?? ""}
-                            key={`topic-${slot?.id ?? pos}`}
-                            placeholder="Topic"
-                            disabled={!ready}
-                            onBlur={(e) => {
-                              if (ready)
-                                run(() =>
-                                  setSpeakerTopic(slot!.id, e.target.value)
-                                );
-                            }}
-                          />
-                          <StatusControl
-                            disabled={!ready}
-                            value={slot?.status ?? "invited"}
-                            onChange={(status) => {
-                              patchSpeaker(pos, { status });
-                              if (ready)
-                                run(() => setSpeakerStatus(slot!.id, status));
-                            }}
-                          />
-                        </div>
-                      );
-                    })}
-                  </div>
+                  <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragEnd={handleSpeakerDragEnd}
+                  >
+                    <SortableContext
+                      items={filled.map((s) => s.id)}
+                      strategy={verticalListSortingStrategy}
+                    >
+                      <div className="space-y-3">
+                        {filled.map((slot) => (
+                          <SortableSpeakerRow key={slot.id} id={slot.id}>
+                            <div className="grid gap-2 sm:grid-cols-[1fr_1fr_auto] sm:items-center">
+                              <MemberCombobox
+                                members={members}
+                                value={slot.memberId}
+                                guestName={slot.memberId ? null : slot.name}
+                                onChange={(sel) =>
+                                  onPickSpeaker(slot.position, sel)
+                                }
+                                placeholder="Speaker"
+                                ariaLabel={`Speaker ${slot.position}`}
+                              />
+                              <Input
+                                key={`topic-${slot.id}`}
+                                defaultValue={slot.topic ?? ""}
+                                placeholder="Topic"
+                                onBlur={(e) =>
+                                  run(() =>
+                                    setSpeakerTopic(slot.id, e.target.value)
+                                  )
+                                }
+                              />
+                              <StatusControl
+                                value={slot.status}
+                                onChange={(status) => {
+                                  patchSpeaker(slot.position, { status });
+                                  run(() => setSpeakerStatus(slot.id, status));
+                                }}
+                              />
+                            </div>
+                          </SortableSpeakerRow>
+                        ))}
+                      </div>
+                    </SortableContext>
+                  </DndContext>
+
+                  {filled.length < MAX_SPEAKERS && (
+                    <div className="mt-3 flex items-start gap-2">
+                      {/* spacer aligns the add row with the dragged rows */}
+                      <span className="size-9 shrink-0 sm:size-8" aria-hidden />
+                      <div className="min-w-0 flex-1">
+                        <MemberCombobox
+                          key={`add-${filled.length}`}
+                          members={members}
+                          value={null}
+                          guestName={null}
+                          onChange={(sel) => {
+                            if (sel) onPickSpeaker(nextSpeakerPos, sel);
+                          }}
+                          placeholder={`Add speaker ${filled.length + 1}`}
+                          ariaLabel="Add speaker"
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -467,8 +582,18 @@ export function MeetingCard({
             </>
           )}
 
-          {/* Remove */}
-          <div className="flex justify-end border-t border-[var(--grey10)] pt-4">
+          {/* Archive (move to History early) / Remove */}
+          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[var(--grey10)] pt-4">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="min-h-[44px] text-muted-foreground hover:bg-[var(--grey3)] hover:text-foreground sm:min-h-8"
+              title="Move this Sunday to History now, before its date passes"
+              onClick={() => run(() => archiveMeeting(meeting.id))}
+            >
+              <Archive className="size-4" />
+              Archive to history
+            </Button>
             <Button
               variant="ghost"
               size="sm"

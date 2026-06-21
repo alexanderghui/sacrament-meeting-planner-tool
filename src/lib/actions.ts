@@ -220,6 +220,36 @@ export async function removeMeeting(meetingId: string) {
   revalidatePlanner();
 }
 
+export async function archiveMeeting(meetingId: string) {
+  const db = await getDb();
+  await db
+    .update(meetings)
+    .set({ archived: true, updatedAt: new Date() })
+    .where(eq(meetings.id, meetingId));
+  await recordAudit(db, {
+    action: "updated",
+    entityType: "meeting",
+    entityId: meetingId,
+    summary: `Archived to History — ${await meetingLabel(db, meetingId)}`,
+  });
+  revalidatePlanner();
+}
+
+export async function unarchiveMeeting(meetingId: string) {
+  const db = await getDb();
+  await db
+    .update(meetings)
+    .set({ archived: false, updatedAt: new Date() })
+    .where(eq(meetings.id, meetingId));
+  await recordAudit(db, {
+    action: "updated",
+    entityType: "meeting",
+    entityId: meetingId,
+    summary: `Moved back to Upcoming — ${await meetingLabel(db, meetingId)}`,
+  });
+  revalidatePlanner();
+}
+
 export async function updateMeetingType(
   meetingId: string,
   type: MeetingTypeValue
@@ -416,6 +446,41 @@ export async function setSpeaker(
   });
   revalidatePlanner();
   return { id: row.id, status: row.status as AssignmentStatusValue };
+}
+
+export async function reorderSpeakers(
+  meetingId: string,
+  orderedIds: string[]
+) {
+  if (orderedIds.length === 0) return;
+  const db = await getDb();
+  // Two-pass to dodge the unique (meeting, role, position) constraint: park the
+  // rows at high positions first, then assign the final dense 1..N order.
+  for (let i = 0; i < orderedIds.length; i++) {
+    await db
+      .update(assignments)
+      .set({ position: 100 + i })
+      .where(
+        and(
+          eq(assignments.id, orderedIds[i]),
+          eq(assignments.meetingId, meetingId),
+          eq(assignments.role, "speaker")
+        )
+      );
+  }
+  for (let i = 0; i < orderedIds.length; i++) {
+    await db
+      .update(assignments)
+      .set({ position: i + 1, updatedAt: new Date() })
+      .where(eq(assignments.id, orderedIds[i]));
+  }
+  await recordAudit(db, {
+    action: "updated",
+    entityType: "assignment",
+    entityId: meetingId,
+    summary: `Reordered speakers — ${await meetingLabel(db, meetingId)}`,
+  });
+  revalidatePlanner();
 }
 
 export async function setSpeakerTopic(assignmentId: string, topic: string) {

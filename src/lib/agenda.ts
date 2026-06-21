@@ -68,10 +68,12 @@ export function buildProgram(opts: {
   const speakers = opts.speakers
     .filter((s) => s.name)
     .sort((a, b) => a.position - b.position)
+    // Number by speaking order (index) so it's always dense 1..N even if the
+    // stored positions have gaps from edits/reordering.
     .map(
-      (s): ProgramItem => ({
+      (s, i): ProgramItem => ({
         kind: "speaker",
-        position: s.position,
+        position: i + 1,
         name: s.name as string,
         topic: s.topic,
       })

@@ -127,6 +127,9 @@ export const meetings = pgTable("meetings", {
   // Sustainings/releases: { name, calling }[] with the fixed vote boilerplate.
   released: jsonb("released").$type<RosterChange[]>().notNull().default([]),
   sustained: jsonb("sustained").$type<RosterChange[]>().notNull().default([]),
+  // Manually moved to History before its date passes (reversible). Upcoming
+  // hides archived meetings; History shows them.
+  archived: boolean("archived").notNull().default(false),
   notes: text("notes"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()

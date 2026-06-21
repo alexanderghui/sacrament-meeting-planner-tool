@@ -1,4 +1,4 @@
-import { asc, desc, eq, gte, inArray, lt } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, lt, or } from "drizzle-orm";
 import { getDb } from "./db";
 import { meetings, assignments, members, hymns } from "./db/schema";
 import { displayName } from "./members";
@@ -61,6 +61,7 @@ export type PlannerMeeting = {
   moveIns: string[];
   released: RosterChange[];
   sustained: RosterChange[];
+  archived: boolean;
   notes: string | null;
   speakers: SpeakerSlot[];
   openingPrayer: PrayerSlot | null;
@@ -195,6 +196,7 @@ function assemble(
       moveIns: m.moveIns ?? [],
       released: m.released ?? [],
       sustained: m.sustained ?? [],
+      archived: m.archived,
       notes: m.notes,
       speakers,
       openingPrayer: prayer("opening_prayer"),
@@ -210,7 +212,8 @@ export async function getUpcomingMeetings(
   const ms = await db
     .select()
     .from(meetings)
-    .where(gte(meetings.date, fromIso))
+    // Upcoming = future-dated AND not manually archived to History.
+    .where(and(gte(meetings.date, fromIso), eq(meetings.archived, false)))
     .orderBy(asc(meetings.date));
   if (ms.length === 0) return [];
   const as = await loadAssignmentRows(db, ms.map((m) => m.id));
@@ -234,7 +237,8 @@ export async function getPastMeetings(
   const ms = await db
     .select()
     .from(meetings)
-    .where(lt(meetings.date, beforeIso))
+    // History = past-dated OR manually archived early.
+    .where(or(lt(meetings.date, beforeIso), eq(meetings.archived, true)))
     .orderBy(desc(meetings.date));
   if (ms.length === 0) return [];
   const as = await loadAssignmentRows(db, ms.map((m) => m.id));
