@@ -2,16 +2,24 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Trash2, Music, Mic, HandHelping, ChevronDown } from "lucide-react";
+import {
+  Trash2,
+  Music,
+  Mic,
+  HandHelping,
+  ChevronDown,
+  FileText,
+} from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Input, Select } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
   MemberCombobox,
   type SpeakerSelection,
 } from "@/components/member-combobox";
 import { HymnCombobox } from "@/components/hymn-combobox";
+import { MeetingAgendaFields } from "@/components/meeting-agenda-fields";
 import { cn } from "@/lib/utils";
 import {
   setSpeaker,
@@ -177,65 +185,88 @@ export function MeetingCard({
 
   return (
     <Card className="overflow-hidden">
-      {/* Collapsed header / toggle */}
-      <button
-        type="button"
-        onClick={() => setExpanded((e) => !e)}
-        className="flex w-full items-center justify-between gap-3 px-6 py-4 text-left transition-colors hover:bg-[var(--grey2)]"
-        aria-expanded={expanded}
-      >
-        <div className="min-w-0">
-          <h3 className="text-base font-semibold leading-tight text-foreground sm:text-lg">
-            {formatDate(meeting.date)}
-          </h3>
-          <div className="mt-1.5 flex flex-wrap items-center gap-2">
-            <Badge variant="outline">{TYPE_LABELS[meeting.type]}</Badge>
-            {hasSpeakers && (
-              <Badge
-                variant={
-                  filled.length > 0 && confirmedCount === filled.length
-                    ? "green"
-                    : "neutral"
-                }
-              >
-                {confirmedCount}/{filled.length} confirmed
-              </Badge>
-            )}
-            {hasSpeakers && speakerPreview && (
-              <span className="truncate text-xs text-muted-foreground">
-                {speakerPreview}
-              </span>
-            )}
+      {/* Collapsed header: toggle + quick "open program" link */}
+      <div className="flex w-full items-stretch">
+        <button
+          type="button"
+          onClick={() => setExpanded((e) => !e)}
+          className="flex flex-1 items-center justify-between gap-3 px-6 py-4 text-left transition-colors hover:bg-[var(--grey2)]"
+          aria-expanded={expanded}
+        >
+          <div className="min-w-0">
+            <h3 className="text-base font-semibold leading-tight text-foreground sm:text-lg">
+              {formatDate(meeting.date)}
+            </h3>
+            <div className="mt-1.5 flex flex-wrap items-center gap-2">
+              <Badge variant="outline">{TYPE_LABELS[meeting.type]}</Badge>
+              {hasSpeakers && (
+                <Badge
+                  variant={
+                    filled.length > 0 && confirmedCount === filled.length
+                      ? "green"
+                      : "neutral"
+                  }
+                >
+                  {confirmedCount}/{filled.length} confirmed
+                </Badge>
+              )}
+              {hasSpeakers && speakerPreview && (
+                <span className="truncate text-xs text-muted-foreground">
+                  {speakerPreview}
+                </span>
+              )}
+            </div>
           </div>
-        </div>
-        <ChevronDown
-          className={cn(
-            "size-5 shrink-0 text-muted-foreground transition-transform",
-            expanded && "rotate-180"
-          )}
-        />
-      </button>
+          <ChevronDown
+            className={cn(
+              "size-5 shrink-0 text-muted-foreground transition-transform",
+              expanded && "rotate-180"
+            )}
+          />
+        </button>
+        <a
+          href={`/program/${meeting.id}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          title="Open program in a new tab"
+          aria-label="Open program in a new tab"
+          className="flex shrink-0 items-center border-l border-[var(--grey10)] px-4 text-muted-foreground transition-colors hover:bg-[var(--grey2)] hover:text-[var(--blue30)]"
+        >
+          <FileText className="size-5" />
+        </a>
+      </div>
 
       {expanded && (
         <div className="space-y-6 border-t border-[var(--grey10)] px-6 py-5">
-          {/* Meeting type */}
-          <div className="sm:max-w-xs">
-            <Label>Meeting type</Label>
-            <Select
-              value={meeting.type}
-              onChange={(e) => {
-                const type = e.target.value as MeetingTypeValue;
-                setMeeting((m) => ({ ...m, type }));
-                run(() => updateMeetingType(meeting.id, type));
-              }}
-              aria-label="Meeting type"
+          {/* Meeting type + open formatted program */}
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div className="w-full sm:max-w-xs">
+              <Label>Meeting type</Label>
+              <Select
+                value={meeting.type}
+                onChange={(e) => {
+                  const type = e.target.value as MeetingTypeValue;
+                  setMeeting((m) => ({ ...m, type }));
+                  run(() => updateMeetingType(meeting.id, type));
+                }}
+                aria-label="Meeting type"
+              >
+                {Object.entries(TYPE_LABELS).map(([v, label]) => (
+                  <option key={v} value={v}>
+                    {label}
+                  </option>
+                ))}
+              </Select>
+            </div>
+            <a
+              href={`/program/${meeting.id}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={cn(buttonVariants({ size: "default" }))}
             >
-              {Object.entries(TYPE_LABELS).map(([v, label]) => (
-                <option key={v} value={v}>
-                  {label}
-                </option>
-              ))}
-            </Select>
+              <FileText className="size-4" />
+              View program
+            </a>
           </div>
 
           {!hasProgram ? (
@@ -417,6 +448,19 @@ export function MeetingCard({
                   />
                 </div>
               </div>
+
+              {/* Announcements + ward business (feed the printable program) */}
+              <MeetingAgendaFields
+                meetingId={meeting.id}
+                announcements={meeting.announcements}
+                moveIns={meeting.moveIns}
+                released={meeting.released}
+                sustained={meeting.sustained}
+                stakeVisitors={meeting.stakeVisitors}
+                stakeBusiness={meeting.stakeBusiness}
+                wardBusinessNote={meeting.wardBusinessNote}
+                openingNote={meeting.openingNote}
+              />
             </>
           )}
 

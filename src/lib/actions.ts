@@ -12,6 +12,7 @@ import {
   todayIso,
   type AssignmentStatusValue,
   type MeetingTypeValue,
+  type RosterChange,
 } from "./meetings";
 import type { DB } from "./db";
 
@@ -72,6 +73,10 @@ const FIELD_LABEL: Record<string, string> = {
   musicalNumber: "musical number",
   theme: "theme",
   notes: "notes",
+  stakeVisitors: "stake visitors",
+  stakeBusiness: "stake business",
+  wardBusinessNote: "ward business note",
+  openingNote: "opening note",
   openingHymn: "opening hymn",
   sacramentHymn: "sacrament hymn",
   intermediateHymn: "intermediate hymn",
@@ -155,7 +160,7 @@ function revalidatePlanner() {
   revalidatePath("/activity");
 }
 
-const MEETING_TEXT_FIELDS = ["conducting", "presiding", "chorister", "accompanist", "musicalNumber", "theme", "notes"] as const;
+const MEETING_TEXT_FIELDS = ["conducting", "presiding", "chorister", "accompanist", "musicalNumber", "theme", "notes", "stakeVisitors", "stakeBusiness", "wardBusinessNote", "openingNote"] as const;
 const MEETING_HYMN_FIELDS = [
   "openingHymn",
   "sacramentHymn",
@@ -276,6 +281,77 @@ export async function updateMeetingHymn(
     summary: value != null
       ? `Set ${FIELD_LABEL[field]} to #${value} — ${date}`
       : `Cleared ${FIELD_LABEL[field]} — ${date}`,
+  });
+  revalidatePlanner();
+}
+
+export async function updateMeetingAnnouncements(
+  meetingId: string,
+  items: string[]
+) {
+  const db = await getDb();
+  const clean = items.map((s) => s.trim()).filter(Boolean);
+  await db
+    .update(meetings)
+    .set({ announcements: clean, updatedAt: new Date() })
+    .where(eq(meetings.id, meetingId));
+  const date = await meetingLabel(db, meetingId);
+  await recordAudit(db, {
+    action: "updated",
+    entityType: "meeting",
+    entityId: meetingId,
+    summary: clean.length
+      ? `Updated announcements (${clean.length}) — ${date}`
+      : `Cleared announcements — ${date}`,
+  });
+  revalidatePlanner();
+}
+
+export async function updateMeetingMoveIns(
+  meetingId: string,
+  items: string[]
+) {
+  const db = await getDb();
+  const clean = items.map((s) => s.trim()).filter(Boolean);
+  await db
+    .update(meetings)
+    .set({ moveIns: clean, updatedAt: new Date() })
+    .where(eq(meetings.id, meetingId));
+  const date = await meetingLabel(db, meetingId);
+  await recordAudit(db, {
+    action: "updated",
+    entityType: "meeting",
+    entityId: meetingId,
+    summary: clean.length
+      ? `Updated new-family move-ins (${clean.length}) — ${date}`
+      : `Cleared move-ins — ${date}`,
+  });
+  revalidatePlanner();
+}
+
+export async function updateMeetingRoster(
+  meetingId: string,
+  field: "released" | "sustained",
+  items: RosterChange[]
+) {
+  if (field !== "released" && field !== "sustained") return;
+  const db = await getDb();
+  const clean = items
+    .map((r) => ({ name: r.name.trim(), calling: r.calling.trim() }))
+    .filter((r) => r.name);
+  await db
+    .update(meetings)
+    .set({ [field]: clean, updatedAt: new Date() })
+    .where(eq(meetings.id, meetingId));
+  const date = await meetingLabel(db, meetingId);
+  const label = field === "released" ? "releases" : "sustainings";
+  await recordAudit(db, {
+    action: "updated",
+    entityType: "meeting",
+    entityId: meetingId,
+    summary: clean.length
+      ? `Updated ${label} (${clean.length}) — ${date}`
+      : `Cleared ${label} — ${date}`,
   });
   revalidatePlanner();
 }

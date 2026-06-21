@@ -135,3 +135,15 @@
     line-height: 1.6;
   }
 }
+
+/* The standalone conducting agenda prints as a clean white document. */
+@media print {
+  body {
+    background: #fff !important;
+  }
+  .agenda {
+    box-shadow: none !important;
+    padding: 0 !important;
+    max-width: none !important;
+  }
+}

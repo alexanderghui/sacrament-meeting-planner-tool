@@ -36,6 +36,9 @@ export type PrayerSlot = {
   name: string | null;
 };
 
+// A person sustained or released in ward business: name + the calling involved.
+export type RosterChange = { name: string; calling: string };
+
 export type PlannerMeeting = {
   id: string;
   date: string;
@@ -50,6 +53,14 @@ export type PlannerMeeting = {
   sacramentHymn: number | null;
   intermediateHymn: number | null;
   closingHymn: number | null;
+  stakeVisitors: string | null;
+  stakeBusiness: string | null;
+  wardBusinessNote: string | null;
+  openingNote: string | null;
+  announcements: string[];
+  moveIns: string[];
+  released: RosterChange[];
+  sustained: RosterChange[];
   notes: string | null;
   speakers: SpeakerSlot[];
   openingPrayer: PrayerSlot | null;
@@ -171,6 +182,14 @@ function assemble(
       sacramentHymn: m.sacramentHymn,
       intermediateHymn: m.intermediateHymn,
       closingHymn: m.closingHymn,
+      stakeVisitors: m.stakeVisitors,
+      stakeBusiness: m.stakeBusiness,
+      wardBusinessNote: m.wardBusinessNote,
+      openingNote: m.openingNote,
+      announcements: m.announcements ?? [],
+      moveIns: m.moveIns ?? [],
+      released: m.released ?? [],
+      sustained: m.sustained ?? [],
       notes: m.notes,
       speakers,
       openingPrayer: prayer("opening_prayer"),
@@ -191,6 +210,16 @@ export async function getUpcomingMeetings(
   if (ms.length === 0) return [];
   const as = await loadAssignmentRows(db, ms.map((m) => m.id));
   return assemble(ms, as);
+}
+
+export async function getMeetingById(
+  id: string
+): Promise<PlannerMeeting | null> {
+  const db = await getDb();
+  const ms = await db.select().from(meetings).where(eq(meetings.id, id));
+  if (ms.length === 0) return null;
+  const as = await loadAssignmentRows(db, [id]);
+  return assemble(ms, as)[0] ?? null;
 }
 
 export async function getPastMeetings(

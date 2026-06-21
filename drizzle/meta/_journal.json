@@ -71,6 +71,13 @@
       "when": 1781631827926,
       "tag": "0009_curious_blue_shield",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1782015063587,
+      "tag": "0010_overrated_valkyrie",
+      "breakpoints": true
     }
   ]
 }

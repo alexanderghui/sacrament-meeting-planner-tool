@@ -28,4 +28,17 @@ function Select({ className, ...props }: React.ComponentProps<"select">) {
   );
 }
 
-export { Input, Select };
+function Textarea({ className, ...props }: React.ComponentProps<"textarea">) {
+  return (
+    <textarea
+      data-slot="textarea"
+      className={cn(
+        "flex min-h-[4.5rem] w-full rounded-sm border border-input bg-[var(--input-background)] px-3 py-2 text-base outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-[var(--blue30)] focus-visible:ring-2 focus-visible:ring-[var(--blue30)]/30 disabled:cursor-not-allowed disabled:opacity-50",
+        className
+      )}
+      {...props}
+    />
+  );
+}
+
+export { Input, Select, Textarea };

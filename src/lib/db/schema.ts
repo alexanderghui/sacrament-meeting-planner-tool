@@ -94,6 +94,9 @@ export const hymns = pgTable("hymns", {
 /* ---------------------------- meetings --------------------------- */
 // One row per Sunday.
 
+// A person sustained or released in ward business: name + the calling involved.
+export type RosterChange = { name: string; calling: string };
+
 export const meetings = pgTable("meetings", {
   id: uuid("id").defaultRandom().primaryKey(),
   date: date("date").notNull().unique(),
@@ -108,6 +111,22 @@ export const meetings = pgTable("meetings", {
   sacramentHymn: integer("sacrament_hymn"),
   intermediateHymn: integer("intermediate_hymn"),
   closingHymn: integer("closing_hymn"),
+  // --- Conducting-agenda fields (read aloud from the stand) ---
+  // Visiting stake leaders to acknowledge (free text, usually blank).
+  stakeVisitors: text("stake_visitors"),
+  // "Turn the time over to ___" / convert-baptism report, etc. (free text).
+  stakeBusiness: text("stake_business"),
+  // Free-text ward-business item (e.g. a baptism/confirmation welcome).
+  wardBusinessNote: text("ward_business_note"),
+  // Special item read right after the opening prayer (e.g. baby blessing invite).
+  openingNote: text("opening_note"),
+  // Numbered announcements: string[] in reading order.
+  announcements: jsonb("announcements").$type<string[]>().notNull().default([]),
+  // New-family move-ins: string[] of family names.
+  moveIns: jsonb("move_ins").$type<string[]>().notNull().default([]),
+  // Sustainings/releases: { name, calling }[] with the fixed vote boilerplate.
+  released: jsonb("released").$type<RosterChange[]>().notNull().default([]),
+  sustained: jsonb("sustained").$type<RosterChange[]>().notNull().default([]),
   notes: text("notes"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
