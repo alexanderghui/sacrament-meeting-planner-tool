@@ -42,7 +42,7 @@ export const authConfig = {
       // 1) Must be signed in (Google + email allowlist). /login is the only
       //    page reachable while signed out; everything else bounces there.
       if (!loggedIn) return onLogin ? true : false;
-      if (onLogin) return Response.redirect(new URL("/members", nextUrl));
+      if (onLogin) return Response.redirect(new URL("/upcoming", nextUrl));
 
       // 2) Shared-password wall. Signed-in users still can't see member data
       //    until they've entered the ward passphrase (proven by a valid cookie).
@@ -53,10 +53,10 @@ export const authConfig = {
         if (!unlocked) {
           return onUnlock ? true : Response.redirect(new URL("/unlock", nextUrl));
         }
-        if (onUnlock) return Response.redirect(new URL("/members", nextUrl));
+        if (onUnlock) return Response.redirect(new URL("/upcoming", nextUrl));
       } else if (onUnlock) {
         // No password configured → nothing to unlock; don't strand them here.
-        return Response.redirect(new URL("/members", nextUrl));
+        return Response.redirect(new URL("/upcoming", nextUrl));
       }
 
       return true;

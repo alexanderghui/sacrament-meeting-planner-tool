@@ -142,11 +142,11 @@ export async function setMemberHidden(memberId: string, hidden: boolean) {
 /* ----------------------------- auth ------------------------------ */
 
 export async function signInGoogle() {
-  await signIn("google", { redirectTo: "/members" });
+  await signIn("google", { redirectTo: "/upcoming" });
 }
 
 export async function signInDev() {
-  await signIn("dev", { redirectTo: "/members" });
+  await signIn("dev", { redirectTo: "/upcoming" });
 }
 
 export async function signOutAction() {

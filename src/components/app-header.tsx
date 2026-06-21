@@ -7,9 +7,9 @@ import { cn } from "@/lib/utils";
 import { signOutAction } from "@/lib/actions";
 
 const navItems = [
-  { href: "/members", label: "Members", icon: Users },
   { href: "/upcoming", label: "Upcoming", icon: CalendarDays },
   { href: "/history", label: "History", icon: History },
+  { href: "/members", label: "Members", icon: Users },
   { href: "/activity", label: "Activity", icon: Activity },
 ];
 
@@ -43,9 +43,9 @@ export function AppHeader({ userName }: { userName?: string | null }) {
           }}
         />
 
-        {/* Decorative blue rays design — narrower on phones to free up room for
-            the wordmark + nav icons; full width from sm up (desktop unchanged) */}
-        <div className="absolute left-[42px] top-0 bottom-0 w-28 sm:w-48 overflow-hidden">
+        {/* Decorative blue rays design — desktop only. On phones it's hidden so
+            the wordmark sits on white (no overlap) right after the blue accent. */}
+        <div className="hidden sm:block absolute left-[42px] top-0 bottom-0 sm:w-48 overflow-hidden">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="https://account.churchofjesuschrist.org/images/blueRays.svg"
@@ -59,7 +59,7 @@ export function AppHeader({ userName }: { userName?: string | null }) {
         >
           <div className="flex items-center justify-between h-full">
             <Link
-              href="/members"
+              href="/upcoming"
               className="relative z-10 ml-[52px] sm:ml-[90px] min-w-0 truncate text-base sm:text-[1.5rem] font-light text-foreground leading-tight"
             >
               Sacrament Planner

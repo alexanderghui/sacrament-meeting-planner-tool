@@ -26,5 +26,5 @@ export async function unlock(
   });
 
   // redirect() throws to interrupt — must be outside any try/catch.
-  redirect("/members");
+  redirect("/upcoming");
 }

@@ -190,7 +190,7 @@ export function MeetingCard({
         <button
           type="button"
           onClick={() => setExpanded((e) => !e)}
-          className="flex min-h-[44px] flex-1 items-center justify-between gap-3 px-4 py-4 text-left transition-colors hover:bg-[var(--grey2)] sm:px-6"
+          className="flex min-h-[44px] min-w-0 flex-1 items-center justify-between gap-3 px-4 py-4 text-left transition-colors hover:bg-[var(--grey2)] sm:px-6"
           aria-expanded={expanded}
         >
           <div className="min-w-0">
