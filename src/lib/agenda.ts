@@ -60,7 +60,7 @@ export function buildProgram(opts: {
   type: MeetingTypeValue;
   speakers: { position: number; name: string | null; topic: string | null }[];
   intermediateHymn: number | null;
-  musicalNumber: string | null;
+  musicalNumbers: string[];
   hymnFallback?: Record<number, string>;
 }): ProgramItem[] {
   if (opts.type === "fast_and_testimony") return [{ kind: "testimony" }];
@@ -82,8 +82,9 @@ export function buildProgram(opts: {
   const mid: ProgramItem[] = [];
   const hymn = hymnText(opts.intermediateHymn, opts.hymnFallback);
   if (hymn) mid.push({ kind: "intermediateHymn", text: hymn });
-  if (opts.musicalNumber?.trim())
-    mid.push({ kind: "musicalNumber", text: opts.musicalNumber.trim() });
+  for (const n of opts.musicalNumbers) {
+    if (n.trim()) mid.push({ kind: "musicalNumber", text: n.trim() });
+  }
 
   if (mid.length === 0) return speakers;
   if (speakers.length === 0) return mid;

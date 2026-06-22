@@ -24,6 +24,8 @@ export const meetingType = pgEnum("meeting_type", [
   "stake_conference",
   "general_conference",
   "primary_program",
+  "easter_program",
+  "christmas_program",
   "no_meeting",
 ]);
 
@@ -105,7 +107,10 @@ export const meetings = pgTable("meetings", {
   presiding: text("presiding"),
   chorister: text("chorister"),
   accompanist: text("accompanist"), // pianist / organist
-  musicalNumber: text("musical_number"), // special number: choir/solo/primary, free-form
+  musicalNumber: text("musical_number"), // deprecated single number — backfilled into musicalNumbers
+  // Choir/solo/special numbers in program order. Programs (Easter/Christmas)
+  // often have several; a regular sacrament meeting has 0–1.
+  musicalNumbers: jsonb("musical_numbers").$type<string[]>().notNull().default([]),
   theme: text("theme"),
   openingHymn: integer("opening_hymn"),
   sacramentHymn: integer("sacrament_hymn"),

@@ -12,6 +12,8 @@ export type MeetingTypeValue =
   | "stake_conference"
   | "general_conference"
   | "primary_program"
+  | "easter_program"
+  | "christmas_program"
   | "no_meeting";
 
 export type AssignmentStatusValue =
@@ -48,6 +50,7 @@ export type PlannerMeeting = {
   chorister: string | null;
   accompanist: string | null;
   musicalNumber: string | null;
+  musicalNumbers: string[];
   theme: string | null;
   openingHymn: number | null;
   sacramentHymn: number | null;
@@ -183,6 +186,7 @@ function assemble(
       chorister: m.chorister,
       accompanist: m.accompanist,
       musicalNumber: m.musicalNumber,
+      musicalNumbers: m.musicalNumbers ?? [],
       theme: m.theme,
       openingHymn: m.openingHymn,
       sacramentHymn: m.sacramentHymn,

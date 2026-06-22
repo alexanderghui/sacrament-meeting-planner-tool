@@ -36,7 +36,7 @@ function RemoveButton({ onClick }: { onClick: () => void }) {
 
 /* --------------------- string-list editor ------------------------- */
 
-function StringListEditor({
+export function StringListEditor({
   items: initial,
   placeholder,
   addLabel,

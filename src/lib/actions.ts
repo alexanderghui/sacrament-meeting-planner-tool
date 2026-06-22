@@ -337,6 +337,28 @@ export async function updateMeetingAnnouncements(
   revalidatePlanner();
 }
 
+export async function updateMeetingMusicalNumbers(
+  meetingId: string,
+  items: string[]
+) {
+  const db = await getDb();
+  const clean = items.map((s) => s.trim()).filter(Boolean);
+  await db
+    .update(meetings)
+    .set({ musicalNumbers: clean, updatedAt: new Date() })
+    .where(eq(meetings.id, meetingId));
+  const date = await meetingLabel(db, meetingId);
+  await recordAudit(db, {
+    action: "updated",
+    entityType: "meeting",
+    entityId: meetingId,
+    summary: clean.length
+      ? `Updated musical numbers (${clean.length}) — ${date}`
+      : `Cleared musical numbers — ${date}`,
+  });
+  revalidatePlanner();
+}
+
 export async function updateMeetingMoveIns(
   meetingId: string,
   items: string[]

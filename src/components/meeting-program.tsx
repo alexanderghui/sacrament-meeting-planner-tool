@@ -51,7 +51,7 @@ export function MeetingProgram({
     !meeting.conducting &&
     !meeting.chorister &&
     !meeting.accompanist &&
-    !meeting.musicalNumber;
+    meeting.musicalNumbers.length === 0;
 
   if (empty) {
     return (
@@ -137,7 +137,7 @@ export function MeetingProgram({
         </div>
       )}
 
-      {(hymns.length > 0 || meeting.musicalNumber) && (
+      {(hymns.length > 0 || meeting.musicalNumbers.length > 0) && (
         <div>
           <Label>Hymns</Label>
           <ul className="space-y-0.5 text-sm text-foreground">
@@ -148,12 +148,11 @@ export function MeetingProgram({
               </li>
             ))}
           </ul>
-          {meeting.musicalNumber && (
-            <p className="mt-1.5 text-sm text-foreground">
-              <span className="text-muted-foreground">Musical number:</span>{" "}
-              {meeting.musicalNumber}
+          {meeting.musicalNumbers.map((mn, i) => (
+            <p key={i} className="mt-1.5 text-sm text-foreground">
+              <span className="text-muted-foreground">Musical number:</span> {mn}
             </p>
-          )}
+          ))}
         </div>
       )}
 

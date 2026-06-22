@@ -20,6 +20,8 @@ const TYPE_TITLE: Record<MeetingTypeValue, string> = {
   stake_conference: "Stake Conference",
   general_conference: "General Conference",
   primary_program: "Primary Program",
+  easter_program: "Easter Program",
+  christmas_program: "Christmas Program",
   no_meeting: "No Meeting",
 };
 
@@ -106,7 +108,7 @@ export function AgendaDocument({
     type: meeting.type,
     speakers: meeting.speakers,
     intermediateHymn: meeting.intermediateHymn,
-    musicalNumber: meeting.musicalNumber,
+    musicalNumbers: meeting.musicalNumbers,
     hymnFallback: hymnTitles,
   });
 

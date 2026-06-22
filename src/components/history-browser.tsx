@@ -29,6 +29,8 @@ const TYPE_LABELS: Record<MeetingTypeValue, string> = {
   stake_conference: "Stake conference",
   general_conference: "General conference",
   primary_program: "Primary program",
+  easter_program: "Easter program",
+  christmas_program: "Christmas program",
   no_meeting: "No meeting",
 };
 

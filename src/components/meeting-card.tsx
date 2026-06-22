@@ -38,7 +38,10 @@ import {
   type SpeakerSelection,
 } from "@/components/member-combobox";
 import { HymnCombobox } from "@/components/hymn-combobox";
-import { MeetingAgendaFields } from "@/components/meeting-agenda-fields";
+import {
+  MeetingAgendaFields,
+  StringListEditor,
+} from "@/components/meeting-agenda-fields";
 import { cn } from "@/lib/utils";
 import {
   setSpeaker,
@@ -49,6 +52,7 @@ import {
   updateMeetingType,
   updateMeetingText,
   updateMeetingHymn,
+  updateMeetingMusicalNumbers,
   removeMeeting,
   archiveMeeting,
 } from "@/lib/actions";
@@ -67,6 +71,8 @@ const TYPE_LABELS: Record<MeetingTypeValue, string> = {
   stake_conference: "Stake conference",
   general_conference: "General conference",
   primary_program: "Primary program",
+  easter_program: "Easter program",
+  christmas_program: "Christmas program",
   no_meeting: "No meeting",
 };
 
@@ -148,6 +154,9 @@ export function MeetingCard({
 }) {
   const [meeting, setMeeting] = useState(initial);
   const [expanded, setExpanded] = useState(defaultExpanded);
+  // Topic typed in the "add speaker" row before a name is chosen; applied once
+  // the speaker is created so you can fill the topic first.
+  const [addTopic, setAddTopic] = useState("");
   const [, startTransition] = useTransition();
   const router = useRouter();
 
@@ -167,10 +176,22 @@ export function MeetingCard({
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
-  const hasProgram = ["sacrament", "fast_and_testimony", "ward_conference"].includes(
-    meeting.type
-  );
-  const hasSpeakers = ["sacrament", "ward_conference"].includes(meeting.type);
+  const hasProgram = [
+    "sacrament",
+    "fast_and_testimony",
+    "ward_conference",
+    "primary_program",
+    "easter_program",
+    "christmas_program",
+  ].includes(meeting.type);
+  // Primary program has no bishopric-tracked speakers; everything else with a
+  // program does (Easter/Christmas behave like a normal sacrament meeting).
+  const hasSpeakers = [
+    "sacrament",
+    "ward_conference",
+    "easter_program",
+    "christmas_program",
+  ].includes(meeting.type);
 
   function patchSpeaker(pos: number, patch: Partial<SpeakerSlot>) {
     setMeeting((m) => {
@@ -224,6 +245,26 @@ export function MeetingCard({
     });
   }
 
+  // Add a speaker from the bottom "add" row, applying any topic typed first.
+  function addSpeaker(sel: SpeakerSelection | null) {
+    if (!sel) return;
+    const f = meeting.speakers.filter((s) => s.name);
+    const pos = f.length ? Math.max(...f.map((s) => s.position)) + 1 : 1;
+    const topic = addTopic.trim();
+    const { memberId, guestName, name } = selFields(sel);
+    patchSpeaker(pos, { memberId, guestName, name });
+    setAddTopic("");
+    run(async () => {
+      const res = await setSpeaker(meeting.id, pos, sel);
+      if (!res) return;
+      patchSpeaker(pos, { id: res.id, status: res.status });
+      if (topic) {
+        await setSpeakerTopic(res.id, topic);
+        patchSpeaker(pos, { topic });
+      }
+    });
+  }
+
   function handleSpeakerDragEnd(event: DragEndEvent) {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
@@ -270,9 +311,6 @@ export function MeetingCard({
     (s) => s.status === "confirmed" || s.status === "spoke"
   ).length;
   const speakerPreview = filled.map((s) => s.name).join(", ");
-  const nextSpeakerPos = filled.length
-    ? Math.max(...filled.map((s) => s.position)) + 1
-    : 1;
 
   return (
     <Card className="overflow-hidden">
@@ -478,18 +516,22 @@ export function MeetingCard({
                     <div className="mt-3 flex items-start gap-2">
                       {/* spacer aligns the add row with the dragged rows */}
                       <span className="size-9 shrink-0 sm:size-8" aria-hidden />
-                      <div className="min-w-0 flex-1">
+                      <div className="grid min-w-0 flex-1 gap-2 sm:grid-cols-[1fr_1fr_auto] sm:items-center">
                         <MemberCombobox
                           key={`add-${filled.length}`}
                           members={members}
                           value={null}
                           guestName={null}
-                          onChange={(sel) => {
-                            if (sel) onPickSpeaker(nextSpeakerPos, sel);
-                          }}
+                          onChange={addSpeaker}
                           placeholder={`Add speaker ${filled.length + 1}`}
                           ariaLabel="Add speaker"
                         />
+                        <Input
+                          value={addTopic}
+                          onChange={(e) => setAddTopic(e.target.value)}
+                          placeholder="Topic"
+                        />
+                        <StatusControl value="invited" disabled onChange={() => {}} />
                       </div>
                     </div>
                   )}
@@ -554,14 +596,13 @@ export function MeetingCard({
                   ))}
                 </div>
                 <div className="mt-4">
-                  <Label>Musical number</Label>
-                  <Input
-                    defaultValue={meeting.musicalNumber ?? ""}
+                  <Label>Musical numbers</Label>
+                  <StringListEditor
+                    items={meeting.musicalNumbers}
                     placeholder="Choir, solo, or special number — e.g. Ward choir: “O Holy Jesus”"
-                    onBlur={(e) =>
-                      run(() =>
-                        updateMeetingText(meeting.id, "musicalNumber", e.target.value)
-                      )
+                    addLabel="Add musical number"
+                    onCommit={(items) =>
+                      run(() => updateMeetingMusicalNumbers(meeting.id, items))
                     }
                   />
                 </div>
