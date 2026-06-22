@@ -470,6 +470,22 @@ export async function setSpeaker(
   return { id: row.id, status: row.status as AssignmentStatusValue };
 }
 
+export async function setProgramBody(
+  meetingId: string,
+  body: import("./meetings").ProgramBodyItem[]
+) {
+  const db = await getDb();
+  // Drop empty music rows so the saved order stays clean.
+  const clean = body.filter(
+    (i) => i.kind !== "music" || i.text.trim().length > 0
+  );
+  await db
+    .update(meetings)
+    .set({ programBody: clean, updatedAt: new Date() })
+    .where(eq(meetings.id, meetingId));
+  revalidatePlanner();
+}
+
 export async function reorderSpeakers(
   meetingId: string,
   orderedIds: string[]

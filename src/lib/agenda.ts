@@ -4,7 +4,11 @@
 // live here as constants and are injected automatically — never typed by hand.
 
 import { HYMN_TITLES } from "./hymns";
-import type { MeetingTypeValue, RosterChange } from "./meetings";
+import type {
+  MeetingTypeValue,
+  RosterChange,
+  ProgramBodyItem,
+} from "./meetings";
 
 export type { RosterChange };
 
@@ -56,39 +60,83 @@ export type ProgramItem =
   | { kind: "musicalNumber"; text: string }
   | { kind: "testimony" };
 
+// The list of musical-number texts for read views: the program body's music
+// when the user has arranged it, otherwise the legacy musicalNumbers column.
+export function programMusicalNumbers(meeting: {
+  programBody: ProgramBodyItem[];
+  musicalNumbers: string[];
+}): string[] {
+  if (meeting.programBody.length)
+    return meeting.programBody
+      .filter((i): i is { kind: "music"; text: string } => i.kind === "music")
+      .map((i) => i.text);
+  return meeting.musicalNumbers;
+}
+
 export function buildProgram(opts: {
   type: MeetingTypeValue;
   speakers: { position: number; name: string | null; topic: string | null }[];
   intermediateHymn: number | null;
   musicalNumbers: string[];
+  programBody?: ProgramBodyItem[];
   hymnFallback?: Record<number, string>;
 }): ProgramItem[] {
   if (opts.type === "fast_and_testimony") return [{ kind: "testimony" }];
 
   const speakers = opts.speakers
     .filter((s) => s.name)
-    .sort((a, b) => a.position - b.position)
-    // Number by speaking order (index) so it's always dense 1..N even if the
-    // stored positions have gaps from edits/reordering.
-    .map(
-      (s, i): ProgramItem => ({
-        kind: "speaker",
-        position: i + 1,
-        name: s.name as string,
-        topic: s.topic,
-      })
-    );
+    .sort((a, b) => a.position - b.position);
+  const hymnItem = (): ProgramItem | null => {
+    const t = hymnText(opts.intermediateHymn, opts.hymnFallback);
+    return t ? { kind: "intermediateHymn", text: t } : null;
+  };
 
-  const mid: ProgramItem[] = [];
-  const hymn = hymnText(opts.intermediateHymn, opts.hymnFallback);
-  if (hymn) mid.push({ kind: "intermediateHymn", text: hymn });
-  for (const n of opts.musicalNumbers) {
-    if (n.trim()) mid.push({ kind: "musicalNumber", text: n.trim() });
+  const body = opts.programBody ?? [];
+  if (body.length) {
+    // Explicit order. Speakers are numbered by their order in the body; items
+    // present in the data but missing from the body are appended (resilient to
+    // adds without strict sync).
+    const byPos = new Map(speakers.map((s) => [s.position, s]));
+    const usedPos = new Set<number>();
+    const items: ProgramItem[] = [];
+    let n = 0;
+    let hymnUsed = false;
+    for (const it of body) {
+      if (it.kind === "speaker") {
+        const s = byPos.get(it.pos);
+        if (s && !usedPos.has(it.pos)) {
+          usedPos.add(it.pos);
+          items.push({ kind: "speaker", position: ++n, name: s.name as string, topic: s.topic });
+        }
+      } else if (it.kind === "music") {
+        if (it.text.trim()) items.push({ kind: "musicalNumber", text: it.text.trim() });
+      } else {
+        const h = hymnItem();
+        if (h) { items.push(h); hymnUsed = true; }
+      }
+    }
+    for (const s of speakers)
+      if (!usedPos.has(s.position))
+        items.push({ kind: "speaker", position: ++n, name: s.name as string, topic: s.topic });
+    if (!hymnUsed) {
+      const h = hymnItem();
+      if (h) items.push(h);
+    }
+    return items;
   }
 
-  if (mid.length === 0) return speakers;
-  if (speakers.length === 0) return mid;
-  if (speakers.length === 1) return [...speakers, ...mid];
-  // ≥2 speakers: intermediate item(s) go just before the last speaker.
-  return [...speakers.slice(0, -1), ...mid, speakers[speakers.length - 1]];
+  // Legacy default placement: intermediate hymn + musical numbers go just
+  // before the final speaker.
+  const numbered = speakers.map(
+    (s, i): ProgramItem => ({ kind: "speaker", position: i + 1, name: s.name as string, topic: s.topic })
+  );
+  const mid: ProgramItem[] = [];
+  const hymn = hymnItem();
+  if (hymn) mid.push(hymn);
+  for (const t of opts.musicalNumbers) if (t.trim()) mid.push({ kind: "musicalNumber", text: t.trim() });
+
+  if (mid.length === 0) return numbered;
+  if (numbered.length === 0) return mid;
+  if (numbered.length === 1) return [...numbered, ...mid];
+  return [...numbered.slice(0, -1), ...mid, numbered[numbered.length - 1]];
 }

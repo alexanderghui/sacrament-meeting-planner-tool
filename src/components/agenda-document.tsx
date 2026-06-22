@@ -109,6 +109,7 @@ export function AgendaDocument({
     speakers: meeting.speakers,
     intermediateHymn: meeting.intermediateHymn,
     musicalNumbers: meeting.musicalNumbers,
+    programBody: meeting.programBody,
     hymnFallback: hymnTitles,
   });
 

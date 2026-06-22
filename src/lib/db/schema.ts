@@ -99,6 +99,14 @@ export const hymns = pgTable("hymns", {
 // A person sustained or released in ward business: name + the calling involved.
 export type RosterChange = { name: string; calling: string };
 
+// One row of the ordered post-sacrament program. Speakers reference their
+// assignment by position; music carries its text inline; "hymn" marks where the
+// intermediate hymn falls. Empty program_body ⇒ default placement (legacy).
+export type ProgramBodyItem =
+  | { kind: "speaker"; pos: number }
+  | { kind: "music"; text: string }
+  | { kind: "hymn" };
+
 export const meetings = pgTable("meetings", {
   id: uuid("id").defaultRandom().primaryKey(),
   date: date("date").notNull().unique(),
@@ -135,6 +143,8 @@ export const meetings = pgTable("meetings", {
   // Manually moved to History before its date passes (reversible). Upcoming
   // hides archived meetings; History shows them.
   archived: boolean("archived").notNull().default(false),
+  // Ordered post-sacrament program; empty ⇒ default placement.
+  programBody: jsonb("program_body").$type<ProgramBodyItem[]>().notNull().default([]),
   notes: text("notes"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()

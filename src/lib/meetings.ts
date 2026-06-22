@@ -41,6 +41,14 @@ export type PrayerSlot = {
 // A person sustained or released in ward business: name + the calling involved.
 export type RosterChange = { name: string; calling: string };
 
+// One row of the ordered post-sacrament program. Speakers reference their
+// assignment by position; music carries its text inline; "hymn" marks where the
+// intermediate hymn falls. Empty ⇒ default placement (legacy meetings).
+export type ProgramBodyItem =
+  | { kind: "speaker"; pos: number }
+  | { kind: "music"; text: string }
+  | { kind: "hymn" };
+
 export type PlannerMeeting = {
   id: string;
   date: string;
@@ -65,6 +73,7 @@ export type PlannerMeeting = {
   released: RosterChange[];
   sustained: RosterChange[];
   archived: boolean;
+  programBody: ProgramBodyItem[];
   notes: string | null;
   speakers: SpeakerSlot[];
   openingPrayer: PrayerSlot | null;
@@ -201,6 +210,7 @@ function assemble(
       released: m.released ?? [],
       sustained: m.sustained ?? [],
       archived: m.archived,
+      programBody: m.programBody ?? [],
       notes: m.notes,
       speakers,
       openingPrayer: prayer("opening_prayer"),

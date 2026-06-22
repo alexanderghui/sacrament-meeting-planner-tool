@@ -1,6 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import type { PlannerMeeting, AssignmentStatusValue } from "@/lib/meetings";
 import { HYMN_TITLES } from "@/lib/hymns";
+import { programMusicalNumbers } from "@/lib/agenda";
 
 const STATUS_LABEL: Record<AssignmentStatusValue, string> = {
   invited: "Invited",
@@ -33,6 +34,7 @@ export function MeetingProgram({
   hymnTitles: Record<number, string>;
 }) {
   const speakers = meeting.speakers.filter((s) => s.name);
+  const musicalNumbers = programMusicalNumbers(meeting);
   const hymns = (
     [
       ["Opening", meeting.openingHymn],
@@ -51,7 +53,7 @@ export function MeetingProgram({
     !meeting.conducting &&
     !meeting.chorister &&
     !meeting.accompanist &&
-    meeting.musicalNumbers.length === 0;
+    musicalNumbers.length === 0;
 
   if (empty) {
     return (
@@ -137,7 +139,7 @@ export function MeetingProgram({
         </div>
       )}
 
-      {(hymns.length > 0 || meeting.musicalNumbers.length > 0) && (
+      {(hymns.length > 0 || musicalNumbers.length > 0) && (
         <div>
           <Label>Hymns</Label>
           <ul className="space-y-0.5 text-sm text-foreground">
@@ -148,7 +150,7 @@ export function MeetingProgram({
               </li>
             ))}
           </ul>
-          {meeting.musicalNumbers.map((mn, i) => (
+          {musicalNumbers.map((mn, i) => (
             <p key={i} className="mt-1.5 text-sm text-foreground">
               <span className="text-muted-foreground">Musical number:</span> {mn}
             </p>

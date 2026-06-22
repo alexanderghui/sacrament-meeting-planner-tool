@@ -1,0 +1,1 @@
+ALTER TABLE "meetings" ADD COLUMN "program_body" jsonb DEFAULT '[]'::jsonb NOT NULL;

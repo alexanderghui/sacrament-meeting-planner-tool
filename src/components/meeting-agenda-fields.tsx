@@ -166,6 +166,7 @@ export function MeetingAgendaFields({
   stakeBusiness,
   wardBusinessNote,
   openingNote,
+  part = "all",
 }: {
   meetingId: string;
   announcements: string[];
@@ -176,6 +177,7 @@ export function MeetingAgendaFields({
   stakeBusiness: string | null;
   wardBusinessNote: string | null;
   openingNote: string | null;
+  part?: "all" | "announcements" | "business";
 }) {
   const [, startTransition] = useTransition();
   const run = (fn: () => Promise<unknown>) =>
@@ -200,6 +202,7 @@ export function MeetingAgendaFields({
   return (
     <>
       {/* Announcements */}
+      {(part === "all" || part === "announcements") && (
       <div>
         <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-foreground">
           <Megaphone className="size-4 text-[var(--blue30)]" /> Announcements
@@ -215,8 +218,10 @@ export function MeetingAgendaFields({
           }
         />
       </div>
+      )}
 
       {/* Ward business & sustainings (collapsible — occasional) */}
+      {(part === "all" || part === "business") && (
       <div>
         <button
           type="button"
@@ -327,6 +332,7 @@ export function MeetingAgendaFields({
           </div>
         )}
       </div>
+      )}
     </>
   );
 }
