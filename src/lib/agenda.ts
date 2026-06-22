@@ -58,7 +58,8 @@ export type ProgramItem =
   | { kind: "speaker"; position: number; name: string; topic: string | null }
   | { kind: "intermediateHymn"; text: string }
   | { kind: "musicalNumber"; text: string }
-  | { kind: "testimony" };
+  | { kind: "testimony" }
+  | { kind: "primaryProgram" };
 
 // The list of musical-number texts for read views: the program body's music
 // when the user has arranged it, otherwise the legacy musicalNumbers column.
@@ -82,6 +83,7 @@ export function buildProgram(opts: {
   hymnFallback?: Record<number, string>;
 }): ProgramItem[] {
   if (opts.type === "fast_and_testimony") return [{ kind: "testimony" }];
+  if (opts.type === "primary_program") return [{ kind: "primaryProgram" }];
 
   const speakers = opts.speakers
     .filter((s) => s.name)

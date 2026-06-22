@@ -277,6 +277,13 @@ export function AgendaDocument({
                       </p>
                     );
                   }
+                  if (item.kind === "primaryProgram") {
+                    return (
+                      <p key={i} className="font-semibold">
+                        Primary Program
+                      </p>
+                    );
+                  }
                   if (item.kind === "speaker") {
                     return (
                       <div key={i} className="leading-relaxed">

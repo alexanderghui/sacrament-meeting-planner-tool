@@ -371,10 +371,11 @@ export function MeetingCard({
               </div>
 
               {/* Program order: speakers + musical numbers + intermediate hymn,
-                  drag-orderable. Hidden on fast Sundays (the program is just
-                  testimonies). Primary program has no speakers but can still
-                  hold musical numbers / the intermediate hymn. */}
-              {meeting.type !== "fast_and_testimony" && (
+                  drag-orderable. Hidden for fast & testimony (testimonies) and
+                  primary program (the agenda just prints "Primary Program"). */}
+              {!["fast_and_testimony", "primary_program"].includes(
+                meeting.type
+              ) && (
                 <ProgramEditor
                   meetingId={meeting.id}
                   members={members}
