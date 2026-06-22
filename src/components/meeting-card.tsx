@@ -2,7 +2,14 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Trash2, ChevronDown, FileText, Archive } from "lucide-react";
+import {
+  Trash2,
+  ChevronDown,
+  FileText,
+  Archive,
+  Music,
+  HandHelping,
+} from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Input, Select } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -53,7 +60,7 @@ function formatDate(iso: string): string {
 
 function Label({ children }: { children: React.ReactNode }) {
   return (
-    <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+    <span className="mb-1 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
       {children}
     </span>
   );
@@ -303,7 +310,9 @@ export function MeetingCard({
               {/* Opening hymn + invocation */}
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <Label>Opening hymn</Label>
+                  <Label>
+                    <Music className="size-3.5 text-[var(--blue30)]" /> Opening hymn
+                  </Label>
                   <HymnCombobox
                     value={meeting.openingHymn}
                     ariaLabel="Opening hymn"
@@ -314,7 +323,10 @@ export function MeetingCard({
                   />
                 </div>
                 <div>
-                  <Label>Invocation (opening prayer)</Label>
+                  <Label>
+                    <HandHelping className="size-3.5 text-[var(--blue30)]" />{" "}
+                    Invocation (opening prayer)
+                  </Label>
                   <MemberCombobox
                     members={members}
                     value={meeting.openingPrayer?.memberId ?? null}
@@ -345,7 +357,9 @@ export function MeetingCard({
 
               {/* Sacrament hymn */}
               <div className="sm:max-w-sm">
-                <Label>Sacrament hymn</Label>
+                <Label>
+                  <Music className="size-3.5 text-[var(--blue30)]" /> Sacrament hymn
+                </Label>
                 <HymnCombobox
                   value={meeting.sacramentHymn}
                   ariaLabel="Sacrament hymn"
@@ -357,23 +371,28 @@ export function MeetingCard({
               </div>
 
               {/* Program order: speakers + musical numbers + intermediate hymn,
-                  drag-orderable. Primary program has no speakers but can still
+                  drag-orderable. Hidden on fast Sundays (the program is just
+                  testimonies). Primary program has no speakers but can still
                   hold musical numbers / the intermediate hymn. */}
-              <ProgramEditor
-                meetingId={meeting.id}
-                members={members}
-                allowSpeakers={hasSpeakers}
-                initialSpeakers={meeting.speakers}
-                initialIntermediateHymn={meeting.intermediateHymn}
-                initialMusicalNumbers={meeting.musicalNumbers}
-                initialProgramBody={meeting.programBody}
-                onSpeakersChange={setProgramSpeakers}
-              />
+              {meeting.type !== "fast_and_testimony" && (
+                <ProgramEditor
+                  meetingId={meeting.id}
+                  members={members}
+                  allowSpeakers={hasSpeakers}
+                  initialSpeakers={meeting.speakers}
+                  initialIntermediateHymn={meeting.intermediateHymn}
+                  initialMusicalNumbers={meeting.musicalNumbers}
+                  initialProgramBody={meeting.programBody}
+                  onSpeakersChange={setProgramSpeakers}
+                />
+              )}
 
               {/* Closing hymn + benediction */}
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <Label>Closing hymn</Label>
+                  <Label>
+                    <Music className="size-3.5 text-[var(--blue30)]" /> Closing hymn
+                  </Label>
                   <HymnCombobox
                     value={meeting.closingHymn}
                     ariaLabel="Closing hymn"
@@ -384,7 +403,10 @@ export function MeetingCard({
                   />
                 </div>
                 <div>
-                  <Label>Benediction (closing prayer)</Label>
+                  <Label>
+                    <HandHelping className="size-3.5 text-[var(--blue30)]" />{" "}
+                    Benediction (closing prayer)
+                  </Label>
                   <MemberCombobox
                     members={members}
                     value={meeting.closingPrayer?.memberId ?? null}
