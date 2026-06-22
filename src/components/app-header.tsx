@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { Users, CalendarDays, History, Activity, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { signOutAction } from "@/lib/actions";
+import type { Role } from "@/lib/gate";
 
 const navItems = [
   { href: "/upcoming", label: "Upcoming", icon: CalendarDays },
@@ -13,9 +14,18 @@ const navItems = [
   { href: "/activity", label: "Activity", icon: Activity },
 ];
 
-export function AppHeader({ userName }: { userName?: string | null }) {
+export function AppHeader({
+  userName,
+  role,
+}: {
+  userName?: string | null;
+  role?: Role | null;
+}) {
   const pathname = usePathname();
   const firstName = userName?.split(" ")[0];
+  // Coordinators are read-only and only have the one page — no nav.
+  const isCoordinator = role === "coordinator";
+  const home = isCoordinator ? "/coordinator" : "/upcoming";
 
   return (
     <header
@@ -60,7 +70,7 @@ export function AppHeader({ userName }: { userName?: string | null }) {
         >
           <div className="flex items-center justify-between h-full">
             <Link
-              href="/upcoming"
+              href={home}
               className="relative z-10 ml-[96px] sm:ml-[90px] shrink-0 text-base sm:text-[1.5rem] font-light leading-[1.05] sm:leading-tight text-foreground"
             >
               <span className="block sm:inline">Sacrament</span>{" "}
@@ -68,7 +78,8 @@ export function AppHeader({ userName }: { userName?: string | null }) {
             </Link>
 
             <nav className="flex shrink-0 items-center gap-0.5 sm:gap-1">
-              {navItems.map(({ href, label, icon: Icon }) => {
+              {!isCoordinator &&
+                navItems.map(({ href, label, icon: Icon }) => {
                 const active =
                   pathname === href || pathname.startsWith(href + "/");
                 return (

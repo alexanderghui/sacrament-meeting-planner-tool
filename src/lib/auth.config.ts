@@ -1,7 +1,7 @@
 import type { NextAuthConfig } from "next-auth";
 import Google from "next-auth/providers/google";
 import Credentials from "next-auth/providers/credentials";
-import { GATE_COOKIE, gateEnabled, verifyGateToken } from "./gate";
+import { GATE_COOKIE, gateEnabled, verifyGateRole } from "./gate";
 
 const hasGoogle = !!(
   process.env.AUTH_GOOGLE_ID && process.env.AUTH_GOOGLE_SECRET
@@ -44,16 +44,29 @@ export const authConfig = {
       if (!loggedIn) return onLogin ? true : false;
       if (onLogin) return Response.redirect(new URL("/upcoming", nextUrl));
 
-      // 2) Shared-password wall. Signed-in users still can't see member data
-      //    until they've entered the ward passphrase (proven by a valid cookie).
+      // 2) Shared-password wall. Signed-in users still can't see anything until
+      //    they've entered a ward passphrase (proven by a valid cookie). The
+      //    role the cookie proves decides what they can reach.
       if (gateEnabled()) {
-        const unlocked = await verifyGateToken(
+        const role = await verifyGateRole(
           request.cookies.get(GATE_COOKIE)?.value
         );
-        if (!unlocked) {
+        if (!role) {
           return onUnlock ? true : Response.redirect(new URL("/unlock", nextUrl));
         }
-        if (onUnlock) return Response.redirect(new URL("/upcoming", nextUrl));
+        const home = role === "coordinator" ? "/coordinator" : "/upcoming";
+        if (onUnlock) return Response.redirect(new URL(home, nextUrl));
+
+        // Coordinators are read-only: only the program list + the printable
+        // program pages. Everything else (the editing app + its server actions)
+        // bounces back to their read-only home.
+        if (role === "coordinator") {
+          const allowed =
+            path === "/coordinator" ||
+            path.startsWith("/coordinator/") ||
+            path.startsWith("/program/");
+          if (!allowed) return Response.redirect(new URL(home, nextUrl));
+        }
       } else if (onUnlock) {
         // No password configured → nothing to unlock; don't strand them here.
         return Response.redirect(new URL("/upcoming", nextUrl));

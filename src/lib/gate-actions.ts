@@ -2,7 +2,7 @@
 
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { checkPassword, expectedGateToken, GATE_COOKIE } from "./gate";
+import { checkPassword, gateCookieFor, GATE_COOKIE } from "./gate";
 
 export type UnlockState = { error?: string };
 
@@ -11,13 +11,13 @@ export async function unlock(
   formData: FormData
 ): Promise<UnlockState> {
   const input = String(formData.get("password") ?? "");
-  if (!checkPassword(input)) {
+  const role = checkPassword(input);
+  if (!role) {
     return { error: "That password isn't right. Try again." };
   }
 
-  const token = await expectedGateToken();
   const jar = await cookies();
-  jar.set(GATE_COOKIE, token, {
+  jar.set(GATE_COOKIE, await gateCookieFor(role), {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
@@ -26,5 +26,6 @@ export async function unlock(
   });
 
   // redirect() throws to interrupt — must be outside any try/catch.
-  redirect("/upcoming");
+  // Coordinators get a read-only program view; clerks get the full app.
+  redirect(role === "coordinator" ? "/coordinator" : "/upcoming");
 }

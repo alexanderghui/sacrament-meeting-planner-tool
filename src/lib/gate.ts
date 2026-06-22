@@ -1,22 +1,34 @@
 // Shared-password gate. A second wall behind Google sign-in: even an allowed,
-// signed-in user must enter the ward's shared passphrase before seeing any
-// member data. Edge-safe by design — no DB, no Node-only APIs — so the same
-// helpers run in middleware (edge) and in the unlock server action (node).
+// signed-in user must enter a ward passphrase before seeing anything.
 //
-// The cookie carries an HMAC token proving the holder knew the password. It is
-// bound to BOTH the password and AUTH_SECRET, so rotating either one instantly
-// invalidates every outstanding cookie (everyone re-enters the new password).
+// Two roles, two passwords:
+//   ACCESS_PASSWORD       → "clerk"       (full bishopric access)
+//   COORDINATOR_PASSWORD  → "coordinator" (read-only program view)
+//
+// Edge-safe by design — no DB, no Node-only APIs — so the same helpers run in
+// the proxy (edge) and in the unlock server action (node). The cookie carries
+// `role.HMAC` where the HMAC is bound to the role, that role's password, and
+// AUTH_SECRET — so it can't be forged and rotating any of them invalidates it.
 export const GATE_COOKIE = "smp_gate";
 
-function pw(): string | undefined {
+export type Role = "clerk" | "coordinator";
+
+function clerkPw(): string | undefined {
   const p = process.env.ACCESS_PASSWORD;
   return p && p.length > 0 ? p : undefined;
 }
+function coordinatorPw(): string | undefined {
+  const p = process.env.COORDINATOR_PASSWORD;
+  return p && p.length > 0 ? p : undefined;
+}
+function pwForRole(role: Role): string | undefined {
+  return role === "clerk" ? clerkPw() : coordinatorPw();
+}
 
-// When no password is configured the gate is disabled — keeps local dev (and a
-// first deploy before the password is set) usable with just Google sign-in.
+// When no clerk password is configured the gate is disabled — keeps local dev
+// (and a first deploy before the password is set) usable with just Google.
 export function gateEnabled(): boolean {
-  return !!pw();
+  return !!clerkPw();
 }
 
 const encoder = new TextEncoder();
@@ -40,11 +52,16 @@ async function hmac(key: string, msg: string): Promise<string> {
   return toB64Url(sig);
 }
 
-export async function expectedGateToken(): Promise<string> {
-  const password = pw();
+async function tokenFor(role: Role): Promise<string> {
+  const password = pwForRole(role);
   if (!password) return "";
   const key = process.env.AUTH_SECRET || password;
-  return hmac(key, "smp-gate:v1:" + password);
+  return hmac(key, `smp-gate:v1:${role}:${password}`);
+}
+
+// The cookie value to set for a role: `role.HMAC`.
+export async function gateCookieFor(role: Role): Promise<string> {
+  return `${role}.${await tokenFor(role)}`;
 }
 
 function constantTimeEqual(a: string, b: string): boolean {
@@ -54,16 +71,26 @@ function constantTimeEqual(a: string, b: string): boolean {
   return out === 0;
 }
 
-// Used by middleware to validate the cookie on every request.
-export async function verifyGateToken(token: string | undefined): Promise<boolean> {
-  if (!token) return false;
-  const expected = await expectedGateToken();
-  return expected !== "" && constantTimeEqual(token, expected);
+// Validate the cookie and return the role it proves, or null. Used on every
+// request by the proxy and by server components.
+export async function verifyGateRole(
+  cookieValue: string | undefined
+): Promise<Role | null> {
+  if (!cookieValue) return null;
+  const dot = cookieValue.indexOf(".");
+  if (dot < 0) return null;
+  const role = cookieValue.slice(0, dot);
+  const token = cookieValue.slice(dot + 1);
+  if (role !== "clerk" && role !== "coordinator") return null;
+  const expected = await tokenFor(role);
+  return expected !== "" && constantTimeEqual(token, expected) ? role : null;
 }
 
-// Used by the unlock action to check what the user typed.
-export function checkPassword(input: string): boolean {
-  const password = pw();
-  if (!password) return false;
-  return constantTimeEqual(input, password);
+// Check what the user typed at /unlock; returns the role it unlocks, or null.
+export function checkPassword(input: string): Role | null {
+  const c = clerkPw();
+  if (c && constantTimeEqual(input, c)) return "clerk";
+  const co = coordinatorPw();
+  if (co && constantTimeEqual(input, co)) return "coordinator";
+  return null;
 }
