@@ -6,6 +6,7 @@ import { cookies } from "next/headers";
 import { getDb } from "./db";
 import { signIn, signOut, ensureUser } from "./auth";
 import { GATE_COOKIE } from "./gate";
+import { currentRole } from "./role";
 import { meetings, assignments, auditLog, members } from "./db/schema";
 import { primaryName } from "./names";
 import {
@@ -149,6 +150,38 @@ export async function signInGoogle() {
 
 export async function signInDev() {
   await signIn("dev", { redirectTo: "/upcoming" });
+}
+
+// Record that a coordinator opened the read-only view, so the bishopric sees it
+// in the activity log. Throttled to one entry per coordinator per 30 minutes so
+// a browsing session is a single line, not one per page load.
+export async function logCoordinatorAccess() {
+  const role = await currentRole();
+  if (role !== "coordinator") return;
+  const user = await ensureUser();
+  if (!user) return;
+  const db = await getDb();
+  const cutoff = new Date(Date.now() - 30 * 60 * 1000);
+  const [recent] = await db
+    .select({ id: auditLog.id })
+    .from(auditLog)
+    .where(
+      and(
+        eq(auditLog.userId, user.id),
+        eq(auditLog.entityType, "access"),
+        gte(auditLog.createdAt, cutoff)
+      )
+    )
+    .limit(1);
+  if (recent) return;
+  await db.insert(auditLog).values({
+    userId: user.id,
+    userEmail: user.email,
+    action: "viewed",
+    entityType: "access",
+    summary: "Viewed the upcoming sacrament meeting programs (read-only)",
+  });
+  revalidatePath("/activity");
 }
 
 export async function signOutAction() {

@@ -1,6 +1,7 @@
 import { FileText, CalendarDays } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { MeetingProgram } from "@/components/meeting-program";
+import { CoordinatorAccessLogger } from "@/components/coordinator-access-logger";
 import {
   getUpcomingMeetings,
   getHymnTitles,
@@ -38,6 +39,7 @@ export default async function CoordinatorPage() {
 
   return (
     <div className="space-y-6">
+      <CoordinatorAccessLogger />
       <div>
         <h2 className="text-2xl sm:text-[1.75rem] font-light leading-tight text-foreground">
           Upcoming sacrament meetings
