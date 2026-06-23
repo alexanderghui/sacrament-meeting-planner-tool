@@ -2,8 +2,10 @@
 
 import { and, eq, gte } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
 import { getDb } from "./db";
 import { signIn, signOut, ensureUser } from "./auth";
+import { GATE_COOKIE } from "./gate";
 import { meetings, assignments, auditLog, members } from "./db/schema";
 import { primaryName } from "./names";
 import {
@@ -150,6 +152,11 @@ export async function signInDev() {
 }
 
 export async function signOutAction() {
+  // Clear the shared-password gate too, so signing back in returns to the
+  // /unlock screen (otherwise a stale gate cookie keeps the old role — e.g. a
+  // coordinator could never get back to the editable view).
+  const jar = await cookies();
+  jar.set(GATE_COOKIE, "", { path: "/", maxAge: 0 });
   await signOut({ redirectTo: "/login" });
 }
 
