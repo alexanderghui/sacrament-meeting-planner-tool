@@ -241,33 +241,14 @@ function cardDesc(m: PlannerMeeting, existing: Parsed | null): string {
     .trimEnd();
 }
 
-// Skip meetings nobody has touched yet — don't create empty placeholder cards.
-function hasContent(m: PlannerMeeting): boolean {
-  return !!(
-    isSpecial(m) ||
-    m.presiding ||
-    m.conducting ||
-    m.chorister ||
-    m.accompanist ||
-    m.openingHymn ||
-    m.sacramentHymn ||
-    m.closingHymn ||
-    m.intermediateHymn ||
-    m.openingPrayer ||
-    m.closingPrayer ||
-    m.speakers.some((s) => s.name) ||
-    m.musicalNumbers.length ||
-    m.announcements.length
-  );
-}
-
 /* ------------------------------- sync ---------------------------------- */
 
 function targets(meetings: PlannerMeeting[]): PlannerMeeting[] {
-  // Every upcoming Sunday the tool knows about — no date horizon — as long as
-  // it has real content or is a special meeting. Bare, untouched future
-  // Sundays are skipped so the board doesn't fill with empty placeholder cards.
-  return meetings.filter((m) => hasContent(m));
+  // Every upcoming Sunday the tool knows about — no date horizon, no content
+  // filter. A card for each, even bare/unplanned ones, so the board mirrors
+  // the planner's full upcoming list. (getUpcomingMeetings already drops
+  // past-dated and manually-archived meetings.)
+  return meetings;
 }
 
 // Render what each upcoming card would become for a fresh card — no Trello
