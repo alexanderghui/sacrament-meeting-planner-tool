@@ -343,14 +343,84 @@ export function planSync(
   return ops;
 }
 
-// Plan the sync against the live planner DB and the cards the caller supplies.
-// Used by POST /api/trello-sync/merge — the cloud routine reads the list,
-// sends the cards here, then applies the ops via its Trello connector.
-export async function planSyncFromDb(
+/* --------------------- smart (judgment) planning ----------------------- */
+
+// The planner's known values for one meeting, blanks omitted. "Omitted" is the
+// signal the routine relies on: if a field isn't here, the planner has nothing
+// to say about it, so the card's existing value must be left alone.
+function plannerFields(m: PlannerMeeting): Record<string, string> {
+  const f: Record<string, string> = {};
+  const set = (k: string, v: string | null | undefined) => {
+    const t = (v ?? "").trim();
+    if (t) f[k] = t;
+  };
+  set("Presiding", m.presiding);
+  set("Conducting", m.conducting);
+  set("Organ", m.accompanist);
+  set("Chorister", m.chorister);
+  set("Opening Hymn", hymnLine(m.openingHymn));
+  set("Opening Prayer", m.openingPrayer?.name);
+  set("Ward Business", m.wardBusinessNote);
+  set("Stake Business", m.stakeBusiness);
+  set("Sacrament Hymn", hymnLine(m.sacramentHymn));
+  set("Closing Hymn", hymnLine(m.closingHymn));
+  set("Closing Prayer", m.closingPrayer?.name);
+  return f;
+}
+
+// One upcoming meeting handed to the daily routine: the planner's ground truth,
+// the card it matched (so the routine can see what a human already wrote), and
+// a safe baseline (suggestedTitle/Body = the deterministic never-erase merge)
+// the routine can apply as-is or adapt with judgment.
+export type SmartItem = {
+  md: string;
+  date: string;
+  type: string;
+  matchedCardId: string | null;
+  currentTitle: string | null;
+  currentBody: string | null;
+  suggestedTitle: string;
+  suggestedBody: string;
+  planner: {
+    fields: Record<string, string>;
+    announcements: string[];
+    program: string[];
+  };
+};
+
+export async function buildSmartPlanFromDb(
   existingCards: ExistingCard[]
-): Promise<SyncOp[]> {
+): Promise<SmartItem[]> {
   const meetings = await getUpcomingMeetings();
-  return planSync(meetings, existingCards);
+  const byMd = new Map<string, ExistingCard>();
+  for (const c of existingCards) {
+    const md = leadingMd(c.name);
+    if (md && !byMd.has(md)) byMd.set(md, c);
+  }
+
+  const items: SmartItem[] = [];
+  for (const m of targets(meetings)) {
+    const md = mdOf(m.date);
+    const existing = byMd.get(md) ?? null;
+    const prev = existing?.desc ?? "";
+    const named = speakerNames(m).length > 0 || isSpecial(m);
+    items.push({
+      md,
+      date: m.date,
+      type: m.type,
+      matchedCardId: existing?.id ?? null,
+      currentTitle: existing?.name ?? null,
+      currentBody: existing ? prev : null,
+      suggestedTitle: named ? cardName(m) : existing?.name ?? cardName(m),
+      suggestedBody: cardDesc(m, parseCard(prev)),
+      planner: {
+        fields: plannerFields(m),
+        announcements: m.announcements ?? [],
+        program: programLines(m),
+      },
+    });
+  }
+  return items;
 }
 
 // Direct sync path (used when a Trello API key/token IS configured, e.g. the
