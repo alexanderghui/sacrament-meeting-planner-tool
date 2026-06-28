@@ -10,6 +10,6 @@ export const config = {
   // icons / manifest (so the home-screen icon loads without a session), and
   // static assets.
   matcher: [
-    "/((?!api/auth|icon|apple-icon|manifest.webmanifest|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
+    "/((?!api/auth|api/trello-sync|icon|apple-icon|manifest.webmanifest|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
   ],
 };
