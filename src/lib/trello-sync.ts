@@ -11,7 +11,7 @@
 //    "Notes (kept)" section at the bottom and never touched.
 //  - The only case a human value is replaced: the bishop edits a field the
 //    planner ALSO has a value for — the planner (source of truth) wins there.
-import { getUpcomingMeetings, isoDate, type PlannerMeeting } from "./meetings";
+import { getUpcomingMeetings, type PlannerMeeting } from "./meetings";
 import { buildProgram } from "./agenda";
 import { HYMN_TITLES } from "./hymns";
 
@@ -264,11 +264,10 @@ function hasContent(m: PlannerMeeting): boolean {
 /* ------------------------------- sync ---------------------------------- */
 
 function targets(meetings: PlannerMeeting[]): PlannerMeeting[] {
-  const weeks = Number(process.env.TRELLO_SYNC_WEEKS || "6");
-  const h = new Date();
-  h.setDate(h.getDate() + weeks * 7);
-  const horizon = isoDate(h);
-  return meetings.filter((m) => m.date <= horizon && hasContent(m));
+  // Every upcoming Sunday the tool knows about — no date horizon — as long as
+  // it has real content or is a special meeting. Bare, untouched future
+  // Sundays are skipped so the board doesn't fill with empty placeholder cards.
+  return meetings.filter((m) => hasContent(m));
 }
 
 // Render what each upcoming card would become for a fresh card — no Trello
