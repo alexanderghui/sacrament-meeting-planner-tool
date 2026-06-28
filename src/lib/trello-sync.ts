@@ -291,45 +291,96 @@ export type SyncResult = {
   details: string[];
 };
 
-export async function syncUpcomingToTrello(): Promise<SyncResult> {
-  const meetings = await getUpcomingMeetings();
-  const list = targets(meetings);
+// One decision per upcoming meeting. The merge math lives entirely here so it
+// can run with NO Trello access: the caller (the API route the cloud routine
+// hits) passes in the cards it already read, and gets back the exact card body
+// to write. That keeps the never-erase guarantee in tested code, not in a
+// routine's prose.
+export type SyncOp =
+  | { action: "create"; md: string; name: string; desc: string }
+  | { action: "update"; md: string; id: string; name: string; desc: string }
+  | { action: "none"; md: string };
 
-  const cards: TrelloCard[] = await trello(`/lists/${LIST_ID}/cards`, {
-    fields: "id,name,desc,closed",
-  });
-  const byMd = new Map<string, TrelloCard>();
-  for (const c of cards) {
+type ExistingCard = { id: string; name: string; desc?: string | null };
+
+// Pure planner: given the upcoming meetings and the cards currently in the
+// list, decide what to create / update / leave alone. No network calls.
+export function planSync(
+  meetings: PlannerMeeting[],
+  existingCards: ExistingCard[]
+): SyncOp[] {
+  const byMd = new Map<string, ExistingCard>();
+  for (const c of existingCards) {
     const md = leadingMd(c.name);
     if (md && !byMd.has(md)) byMd.set(md, c);
   }
 
-  const res: SyncResult = { created: 0, updated: 0, unchanged: 0, details: [] };
-  for (const m of list) {
+  const ops: SyncOp[] = [];
+  for (const m of targets(meetings)) {
     const md = mdOf(m.date);
     const existing = byMd.get(md);
     if (existing) {
-      const desc = cardDesc(m, parseCard(existing.desc));
+      const prev = existing.desc ?? "";
+      const desc = cardDesc(m, parseCard(prev));
       // Update the title only when we have real speakers or a special meeting
       // type — never downgrade a deliberately-named card to a generic one.
       const name =
         speakerNames(m).length > 0 || isSpecial(m) ? cardName(m) : existing.name;
-      if (existing.desc.trimEnd() !== desc || existing.name !== name) {
-        await trello(`/cards/${existing.id}`, { name, desc }, "PUT");
-        res.updated++;
-        res.details.push(`updated ${md}`);
+      if (prev.trimEnd() !== desc || existing.name !== name) {
+        ops.push({ action: "update", md, id: existing.id, name, desc });
       } else {
-        res.unchanged++;
+        ops.push({ action: "none", md });
       }
     } else {
+      ops.push({
+        action: "create",
+        md,
+        name: cardName(m),
+        desc: cardDesc(m, null),
+      });
+    }
+  }
+  return ops;
+}
+
+// Plan the sync against the live planner DB and the cards the caller supplies.
+// Used by POST /api/trello-sync/merge — the cloud routine reads the list,
+// sends the cards here, then applies the ops via its Trello connector.
+export async function planSyncFromDb(
+  existingCards: ExistingCard[]
+): Promise<SyncOp[]> {
+  const meetings = await getUpcomingMeetings();
+  return planSync(meetings, existingCards);
+}
+
+// Direct sync path (used when a Trello API key/token IS configured, e.g. the
+// Vercel cron). Reads + writes the board itself via the REST API.
+export async function syncUpcomingToTrello(): Promise<SyncResult> {
+  const meetings = await getUpcomingMeetings();
+  const cards: TrelloCard[] = await trello(`/lists/${LIST_ID}/cards`, {
+    fields: "id,name,desc,closed",
+  });
+  const ops = planSync(meetings, cards);
+
+  const res: SyncResult = { created: 0, updated: 0, unchanged: 0, details: [] };
+  for (const op of ops) {
+    if (op.action === "create") {
       await trello(
         `/cards`,
-        { idList: LIST_ID, name: cardName(m), desc: cardDesc(m, null), pos: "bottom" },
+        { idList: LIST_ID, name: op.name, desc: op.desc, pos: "bottom" },
         "POST"
       );
       res.created++;
-      res.details.push(`created ${md}`);
+      res.details.push(`created ${op.md}`);
+    } else if (op.action === "update") {
+      await trello(`/cards/${op.id}`, { name: op.name, desc: op.desc }, "PUT");
+      res.updated++;
+      res.details.push(`updated ${op.md}`);
+    } else {
+      res.unchanged++;
     }
   }
   return res;
 }
+
+export const SACRAMENT_LIST_ID = LIST_ID;
