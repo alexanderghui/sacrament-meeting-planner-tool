@@ -66,6 +66,25 @@ function Label({ children }: { children: React.ReactNode }) {
   );
 }
 
+// Resolve a meeting's speakers into program order via programBody — the same
+// source of truth the ProgramEditor uses. Falls back to raw speaker rows when
+// there is no body yet. This keeps the collapsed preview from ever showing a
+// speaker the editor doesn't (e.g. a stray assignment row not in the body).
+function seedProgramSpeakers(
+  m: PlannerMeeting
+): { name: string | null; status: AssignmentStatusValue }[] {
+  const named = m.speakers.filter((s) => s.name);
+  const body = m.programBody ?? [];
+  const source = body.length
+    ? body.flatMap((b) => {
+        if (b.kind !== "speaker") return [];
+        const s = named.find((x) => x.position === b.pos);
+        return s ? [s] : [];
+      })
+    : [...named].sort((a, b) => a.position - b.position);
+  return source.map((s) => ({ name: s.name, status: s.status }));
+}
+
 export function MeetingCard({
   meeting: initial,
   members,
@@ -78,15 +97,13 @@ export function MeetingCard({
   const [meeting, setMeeting] = useState(initial);
   const [expanded, setExpanded] = useState(defaultExpanded);
   // Speaker names + statuses (in program order) for the collapsed-card preview,
-  // kept fresh by the ProgramEditor via onSpeakersChange.
+  // kept fresh by the ProgramEditor via onSpeakersChange. Seeded by resolving
+  // through programBody — the SAME source the editor uses — so the collapsed
+  // preview can never disagree with the expanded editor (e.g. never double-show
+  // a stray assignment row that programBody doesn't reference).
   const [programSpeakers, setProgramSpeakers] = useState<
     { name: string | null; status: AssignmentStatusValue }[]
-  >(() =>
-    initial.speakers
-      .filter((s) => s.name)
-      .sort((a, b) => a.position - b.position)
-      .map((s) => ({ name: s.name, status: s.status }))
-  );
+  >(() => seedProgramSpeakers(initial));
   const [, startTransition] = useTransition();
   const router = useRouter();
 

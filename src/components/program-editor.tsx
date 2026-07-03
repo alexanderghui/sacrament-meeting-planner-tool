@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { GripVertical, X, Plus, Mic, Music, Music2 } from "lucide-react";
 import {
   DndContext,
@@ -127,12 +128,16 @@ export function ProgramEditor({
   ) => void;
 }) {
   const [, startTransition] = useTransition();
+  const router = useRouter();
   const run = (fn: () => Promise<unknown>) =>
     startTransition(async () => {
       try {
         await fn();
       } catch {
-        /* optimistic; reconciled on next load */
+        // A write failed. Reload authoritative server state so the optimistic
+        // UI can't drift out of sync — a half-completed speaker save used to
+        // leave an orphan assignment row (see seedProgramSpeakers).
+        router.refresh();
       }
     });
 
@@ -205,14 +210,19 @@ export function ProgramEditor({
   // ---- speaker rows ----
   function pickExistingSpeaker(pos: number, sel: SpeakerSelection | null) {
     if (!sel) {
-      // Remove this speaker.
+      // Remove this speaker. Do both writes in one transition, order first so a
+      // failed row-delete can't leave a speaker the body no longer references.
+      const nextRows = rows.filter((r) => !(r.kind === "speaker" && r.pos === pos));
       setSlots((m) => {
         const next = new Map(m);
         next.delete(pos);
         return next;
       });
-      setRowsAndPersist(rows.filter((r) => !(r.kind === "speaker" && r.pos === pos)));
-      run(() => setSpeaker(meetingId, pos, null));
+      setRows(nextRows);
+      run(async () => {
+        await setProgramBody(meetingId, rowsToBody(nextRows));
+        await setSpeaker(meetingId, pos, null);
+      });
       return;
     }
     const { memberId, guestName, name } = selFields(members, sel);
@@ -228,17 +238,22 @@ export function ProgramEditor({
     const pos = nextPos();
     const topic = addTopic.trim();
     const { memberId, guestName, name } = selFields(members, sel);
+    const nextRows: Row[] = [...rows, { id: newId(), kind: "speaker", pos }];
     patchSlot(pos, { memberId, guestName, name, topic: topic || null });
     setAddTopic("");
-    setRowsAndPersist([...rows, { id: newId(), kind: "speaker", pos }]);
+    setRows(nextRows);
+    // Both writes in one transition, speaker row first so the order is never
+    // persisted referencing a row that failed to save.
     run(async () => {
       const res = await setSpeaker(meetingId, pos, sel);
-      if (!res) return;
-      patchSlot(pos, { id: res.id, status: res.status });
-      if (topic) {
-        await setSpeakerTopic(res.id, topic);
-        patchSlot(pos, { topic });
+      if (res) {
+        patchSlot(pos, { id: res.id, status: res.status });
+        if (topic) {
+          await setSpeakerTopic(res.id, topic);
+          patchSlot(pos, { topic });
+        }
       }
+      await setProgramBody(meetingId, rowsToBody(nextRows));
     });
   }
 
