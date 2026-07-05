@@ -10,12 +10,18 @@ const ACTION_VARIANT: Record<string, "green" | "neutral" | "red"> = {
   deleted: "red",
 };
 
+// The app runs in one ward's local time. Server components render in the
+// server's zone (UTC on Vercel), so pin the display zone or timestamps show
+// ~6 hours ahead of the clock on the wall.
+const WARD_TZ = "America/Denver";
+
 function dayKey(d: Date) {
   return new Date(d).toLocaleDateString("en-US", {
     weekday: "long",
     month: "long",
     day: "numeric",
     year: "numeric",
+    timeZone: WARD_TZ,
   });
 }
 
@@ -23,6 +29,7 @@ function time(d: Date) {
   return new Date(d).toLocaleTimeString("en-US", {
     hour: "numeric",
     minute: "2-digit",
+    timeZone: WARD_TZ,
   });
 }
 

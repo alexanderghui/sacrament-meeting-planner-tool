@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { Plus, X, Megaphone, ClipboardList, ChevronDown } from "lucide-react";
 import { Input, Textarea } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -180,12 +181,16 @@ export function MeetingAgendaFields({
   part?: "all" | "announcements" | "business";
 }) {
   const [, startTransition] = useTransition();
+  const router = useRouter();
   const run = (fn: () => Promise<unknown>) =>
     startTransition(async () => {
       try {
         await fn();
       } catch {
-        /* optimistic; the next load reconciles */
+        // Don't silently drop a failed save (the "I typed it but it didn't
+        // save" bug) — reload authoritative state so the value visibly reverts
+        // instead of looking saved.
+        router.refresh();
       }
     });
 
