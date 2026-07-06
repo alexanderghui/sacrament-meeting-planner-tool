@@ -3,6 +3,8 @@
 import { randomUUID } from "node:crypto";
 import { and, eq, gte } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
+import { fireTrelloSync } from "./trello-fire";
 import { cookies } from "next/headers";
 import { getDb } from "./db";
 import { signIn, signOut, ensureUser } from "./auth";
@@ -200,6 +202,9 @@ function revalidatePlanner() {
   revalidatePath("/history");
   revalidatePath("/activity");
   revalidatePath("/set-apart");
+  // Nudge the Trello routine so the board reflects this edit within a minute or
+  // two (throttled + fire-and-forget; runs after the response).
+  after(fireTrelloSync);
 }
 
 const MEETING_TEXT_FIELDS = ["conducting", "presiding", "chorister", "accompanist", "musicalNumber", "theme", "notes", "stakeVisitors", "stakeBusiness", "wardBusinessNote", "openingNote"] as const;
@@ -506,6 +511,7 @@ export async function setSetApart(
   });
   revalidatePath("/set-apart");
   revalidatePath("/activity");
+  after(fireTrelloSync);
 }
 
 /* -------------------------- assignments -------------------------- */
