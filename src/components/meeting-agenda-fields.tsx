@@ -136,20 +136,20 @@ function RosterListEditor({
     <div className="space-y-2">
       {items.map((row, i) => (
         <div key={i} className="flex items-start gap-2">
-          <Input
-            value={row.name}
-            placeholder="Name"
-            className="flex-1"
-            onChange={(e) => setAt(i, { name: e.target.value })}
-            onBlur={() => flush()}
-          />
-          <Input
-            value={row.calling}
-            placeholder="Calling"
-            className="flex-1"
-            onChange={(e) => setAt(i, { calling: e.target.value })}
-            onBlur={() => flush()}
-          />
+          <div className="grid flex-1 gap-2 sm:grid-cols-2">
+            <Input
+              value={row.name}
+              placeholder="Name"
+              onChange={(e) => setAt(i, { name: e.target.value })}
+              onBlur={() => flush()}
+            />
+            <Input
+              value={row.calling}
+              placeholder="Calling"
+              onChange={(e) => setAt(i, { calling: e.target.value })}
+              onBlur={() => flush()}
+            />
+          </div>
           <RemoveButton onClick={() => removeAt(i)} />
         </div>
       ))}
