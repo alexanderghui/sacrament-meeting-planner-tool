@@ -44,3 +44,96 @@ export async function getSetAparts(): Promise<SetApartItem[]> {
   }
   return out;
 }
+
+/* ----------------------- Trello card reconcile ------------------------ */
+
+// The "To Be Set Apart" list on the Bishopric board (overridable by env).
+export const SETAPART_LIST_ID =
+  process.env.TRELLO_SETAPART_LIST_ID || "6a4b3dd618b474cb17956b6a";
+
+const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+function prettyDate(iso: string): string {
+  const [y, m, d] = iso.split("-").map(Number);
+  return y && m && d ? `${MONTHS[m - 1]} ${d}, ${y}` : iso;
+}
+
+function cardTitle(it: SetApartItem): string {
+  return it.calling ? `${it.name} - ${it.calling}` : it.name;
+}
+
+// The entry id lives in the card body as a "Ref:" line so cards can be matched
+// back to people even if a name or calling is edited.
+function cardDesc(it: SetApartItem): string {
+  const lines = [`Sustained ${prettyDate(it.meetingDate)}`];
+  if (it.setApartOn) lines.push(`Set apart ${prettyDate(it.setApartOn)}`);
+  lines.push("", `Ref: ${it.entryId}`);
+  return lines.join("\n");
+}
+
+function parseRef(desc: string | null | undefined): string | null {
+  const m = (desc || "").match(/Ref:\s*([0-9a-f-]{36})/i);
+  return m ? m[1] : null;
+}
+
+type ExistingCard = {
+  id: string;
+  name: string;
+  desc?: string | null;
+  closed?: boolean;
+};
+
+// One decision per card. The daily routine applies these via its connector:
+// create → add card; update → set name/desc; archive → set closed=true (after
+// stamping the set-apart date); unarchive → set closed=false (an undo).
+export type SetApartCardOp =
+  | { action: "create"; ref: string; title: string; desc: string }
+  | { action: "update"; cardId: string; title: string; desc: string }
+  | { action: "archive"; cardId: string; desc: string }
+  | { action: "unarchive"; cardId: string; title: string; desc: string };
+
+export function planSetApartCards(
+  items: SetApartItem[],
+  cards: ExistingCard[]
+): SetApartCardOp[] {
+  const byRef = new Map<string, ExistingCard>();
+  for (const c of cards) {
+    const ref = parseRef(c.desc);
+    if (ref && !byRef.has(ref)) byRef.set(ref, c);
+  }
+  const itemRefs = new Set(items.map((i) => i.entryId));
+  const ops: SetApartCardOp[] = [];
+
+  for (const it of items) {
+    const title = cardTitle(it);
+    const desc = cardDesc(it);
+    const card = byRef.get(it.entryId);
+    const wantOpen = !it.setApartOn; // pending → open card; done → archived
+
+    if (!card) {
+      if (wantOpen) ops.push({ action: "create", ref: it.entryId, title, desc });
+      continue; // done + never carded → nothing to do
+    }
+    if (wantOpen) {
+      if (card.closed) ops.push({ action: "unarchive", cardId: card.id, title, desc });
+      else if (card.name !== title || (card.desc ?? "").trim() !== desc)
+        ops.push({ action: "update", cardId: card.id, title, desc });
+    } else if (!card.closed) {
+      ops.push({ action: "archive", cardId: card.id, desc });
+    }
+  }
+
+  // A card whose person no longer exists (sustaining deleted) → archive it.
+  for (const c of cards) {
+    const ref = parseRef(c.desc);
+    if (ref && !itemRefs.has(ref) && !c.closed)
+      ops.push({ action: "archive", cardId: c.id, desc: c.desc ?? "" });
+  }
+  return ops;
+}
+
+export async function buildSetApartPlanFromDb(
+  cards: ExistingCard[]
+): Promise<SetApartCardOp[]> {
+  const items = await getSetAparts();
+  return planSetApartCards(items, cards);
+}
