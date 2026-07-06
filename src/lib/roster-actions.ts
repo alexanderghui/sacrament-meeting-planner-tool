@@ -13,6 +13,7 @@ import {
   type ExistingMember,
   type ParseResult,
 } from "./roster";
+import { parseRosterPdf } from "./roster-pdf";
 
 async function activeMembers(): Promise<ExistingMember[]> {
   const db = await getDb();
@@ -55,11 +56,14 @@ export async function previewRoster(
   };
 
   if (!file || file.size === 0) {
-    return { ...empty, errors: ["Please choose a CSV file to upload."] };
+    return { ...empty, errors: ["Please choose a PDF or CSV file to upload."] };
   }
 
-  const text = await file.text();
-  const parsed = parseRosterCsv(text);
+  const isPdf =
+    file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
+  const parsed = isPdf
+    ? await parseRosterPdf(new Uint8Array(await file.arrayBuffer()))
+    : parseRosterCsv(await file.text());
   if (parsed.errors.length) {
     return { ...empty, filename: file.name, errors: parsed.errors, columns: parsed.columns };
   }

@@ -89,17 +89,17 @@ export function RosterImport() {
         <form action={previewAction} className="space-y-4">
           <div>
             <label className="mb-1 block text-sm font-semibold text-foreground">
-              Roster file (CSV)
+              Roster file (PDF or CSV)
             </label>
             <p className="mb-3 text-sm text-muted-foreground">
-              Export your ward directory from LCR as a CSV, then upload it here.
-              We&apos;ll compare it to the current list and show what changed
-              before anything is saved.
+              Upload the ward directory straight from LCR — the Member List PDF
+              works as-is, or a CSV if you have one. We&apos;ll compare it to the
+              current list and show what changed before anything is saved.
             </p>
             <input
               type="file"
               name="file"
-              accept=".csv,text/csv"
+              accept=".pdf,application/pdf,.csv,text/csv"
               className="block w-full text-sm text-foreground file:mr-3 file:rounded-sm file:border-0 file:bg-secondary file:px-3 file:py-2 file:text-sm file:text-foreground hover:file:bg-accent"
             />
           </div>
