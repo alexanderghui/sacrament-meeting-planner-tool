@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Check, Undo2, Hand } from "lucide-react";
+import { Check, X, Hand } from "lucide-react";
 import { setSetApart } from "@/lib/actions";
 import type { SetApartItem } from "@/lib/set-apart";
 
@@ -165,9 +165,16 @@ export function SetApartList({ items: initial }: { items: SetApartItem[] }) {
                 key={it.entryId}
                 className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-sm px-4 py-3"
               >
-                <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-[var(--status-green)] text-white">
-                  <Check className="size-4" />
-                </div>
+                <button
+                  type="button"
+                  onClick={() => undo(it)}
+                  aria-label={`Mark ${it.name} not set apart`}
+                  title="Undo — mark not set apart"
+                  className="group flex size-7 shrink-0 items-center justify-center rounded-full bg-[var(--status-green)] text-white transition-colors hover:bg-[var(--status-red)]"
+                >
+                  <Check className="size-4 group-hover:hidden" />
+                  <X className="hidden size-4 group-hover:block" />
+                </button>
                 <div className="min-w-0 flex-1">
                   <div className="font-medium text-muted-foreground line-through">
                     {it.name}
@@ -188,14 +195,6 @@ export function SetApartList({ items: initial }: { items: SetApartItem[] }) {
                     className="rounded-sm border border-[var(--grey15)] bg-[var(--input-background)] px-2 py-1 text-xs text-foreground outline-none focus-visible:border-[var(--blue30)]"
                   />
                   {it.setApartBy && <span>by {it.setApartBy}</span>}
-                  <button
-                    type="button"
-                    onClick={() => undo(it)}
-                    className="inline-flex items-center gap-1 text-[var(--blue30)] hover:underline"
-                  >
-                    <Undo2 className="size-3.5" />
-                    Undo
-                  </button>
                 </div>
               </li>
             ))}
