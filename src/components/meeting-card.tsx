@@ -21,7 +21,20 @@ import {
 import { AutosaveInput } from "@/components/autosave-input";
 import { HymnCombobox } from "@/components/hymn-combobox";
 import { MeetingAgendaFields } from "@/components/meeting-agenda-fields";
-import { ProgramEditor } from "@/components/program-editor";
+import dynamic from "next/dynamic";
+
+// Lazy-load the program editor (and its dnd-kit dependency) so it isn't in the
+// initial bundle. Only expanded cards render it, so the chunk loads on first
+// expand instead of on page load.
+const ProgramEditor = dynamic(
+  () => import("@/components/program-editor").then((m) => m.ProgramEditor),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-40 w-full animate-pulse rounded-md bg-muted" />
+    ),
+  }
+);
 import { cn } from "@/lib/utils";
 import {
   setPrayer,

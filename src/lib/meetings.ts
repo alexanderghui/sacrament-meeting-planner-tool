@@ -1,7 +1,8 @@
 import { and, asc, desc, eq, gte, inArray, lt, or } from "drizzle-orm";
 import { getDb } from "./db";
-import { meetings, assignments, members, hymns } from "./db/schema";
+import { meetings, assignments, members } from "./db/schema";
 import { displayName } from "./members";
+import { HYMN_TITLES } from "./hymns";
 import { primaryName } from "./names";
 import type { DB } from "./db";
 
@@ -259,12 +260,9 @@ export async function getPastMeetings(
   return assemble(ms, as);
 }
 
+// The hymn book is a static constant in code (HYMN_TITLES) — it never changes,
+// so there's no reason to pay a DB round-trip for it on every history /
+// coordinator / program render. Kept async so callers don't have to change.
 export async function getHymnTitles(): Promise<Record<number, string>> {
-  const db = await getDb();
-  const rows = await db
-    .select({ number: hymns.number, title: hymns.title })
-    .from(hymns);
-  const out: Record<number, string> = {};
-  for (const r of rows) if (r.number != null) out[r.number] = r.title;
-  return out;
+  return HYMN_TITLES;
 }
