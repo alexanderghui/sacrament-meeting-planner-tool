@@ -7,10 +7,16 @@
 //   2. take every Gender (M/F) and Birth Date cell as a row "anchor" — every
 //      member has both, exactly once,
 //   3. attach every other cell to its nearest anchor (by vertical distance) and
-//      to its column (by x), joining wrapped lines back together.
+//      to its column (by x), joining wrapped name and email lines back together.
 //
-// This mirrors private/extract_roster.py and was validated to reproduce its
-// output exactly (334/334 members) on the real ward export.
+// One wrinkle LCR's paginator introduces: a member whose row lands on a page
+// boundary can have its data on the bottom of one page and its (wrapped) name
+// on the top of the next. Neither fragment is a complete member on its own, so
+// we collect the leftovers — data-with-no-name and name-with-no-data — and
+// stitch the pair back together across the seam.
+//
+// Mirrors private/extract_roster.py; validated to reproduce its output exactly
+// (334/334 members) on the real ward export.
 
 import { getDocumentProxy } from "unpdf";
 import { parseBirthdate, type ParseResult, type RosterRow } from "./roster";
@@ -31,8 +37,24 @@ const ROW_TOLERANCE = 12;
 // Merge anchor signals this close into a single row (a member's Gender and
 // Birth Date share a baseline; a wrapped name centres its data between lines).
 const ANCHOR_CLUSTER = 8;
+// Orphan name lines this close vertically belong to the same wrapped name.
+const NAME_LINE_GAP = 15;
 
 type Item = { str: string; x: number; y: number };
+
+type Raw = {
+  fullName: string;
+  gender: "M" | "F" | null;
+  phone: string | null;
+  email: string | null;
+  birthRaw: string;
+};
+
+// A row fragment in document order: a full member, data missing its name, or a
+// name missing its data. The latter two only occur where a row splits a page.
+type Fragment =
+  | { kind: "complete" | "data"; page: number; y: number; raw: Raw }
+  | { kind: "name"; page: number; y: number; name: string };
 
 function columnFor(x: number, cols: { key: string; x: number }[]): string {
   let key = cols[0].key;
@@ -49,9 +71,7 @@ const emptyColumns = (): ParseResult["columns"] => ({
   birthdate: false,
 });
 
-export async function parseRosterPdf(
-  bytes: Uint8Array
-): Promise<ParseResult> {
+export async function parseRosterPdf(bytes: Uint8Array): Promise<ParseResult> {
   let pdf;
   try {
     pdf = await getDocumentProxy(bytes);
@@ -63,13 +83,13 @@ export async function parseRosterPdf(
     };
   }
 
-  const rows: RosterRow[] = [];
+  const fragments: Fragment[] = [];
   let sawRosterPage = false;
 
   for (let p = 1; p <= pdf.numPages; p++) {
     const page = await pdf.getPage(p);
     const content = await page.getTextContent();
-    const items: Item[] = content.items
+    const all: Item[] = content.items
       .filter(
         (it): it is Extract<typeof it, { transform: number[] }> =>
           "str" in it && "transform" in it && it.str.trim().length > 0
@@ -79,11 +99,27 @@ export async function parseRosterPdf(
     // Column x-positions from this page's header row.
     const cols: { key: string; x: number }[] = [];
     for (const label of HEADERS) {
-      const h = items.find((it) => it.str === label);
+      const h = all.find((it) => it.str === label);
       if (h) cols.push({ key: label, x: h.x });
     }
     if (!cols.some((c) => c.key === "Gender")) continue; // title / non-roster page
     sawRosterPage = true;
+    const nameX = cols.find((c) => c.key === "Name")!.x;
+
+    // Drop the header labels, the page footer, and the trailing "Count:" line so
+    // none of them can masquerade as a member or an orphan name.
+    const footerY = Math.max(
+      ...all
+        .filter((it) => /For Church Use Only|Intellectual Reserve/.test(it.str))
+        .map((it) => it.y),
+      -Infinity
+    );
+    const items = all.filter(
+      (it) =>
+        it.y > footerY + 3 &&
+        !(HEADERS as readonly string[]).includes(it.str) &&
+        !it.str.startsWith("Count:")
+    );
 
     // Row anchors from Gender (M/F) and Birth Date cells in their columns.
     const anchorSignals: number[] = [];
@@ -102,12 +138,12 @@ export async function parseRosterPdf(
       } else clusters.push({ sum: y, n: 1 });
     }
     const anchorY = clusters.map((c) => c.sum / c.n);
-    if (!anchorY.length) continue;
 
     const buckets: Record<string, Item[]>[] = anchorY.map(() => ({}));
+    const orphanNameItems: Item[] = [];
     for (const it of items) {
       const col = columnFor(it.x, cols);
-      if (col === "Age" || (HEADERS as readonly string[]).includes(it.str)) continue;
+      if (col === "Age") continue;
       let bi = 0;
       let best = Infinity;
       for (let i = 0; i < anchorY.length; i++) {
@@ -117,11 +153,18 @@ export async function parseRosterPdf(
           bi = i;
         }
       }
-      if (best > ROW_TOLERANCE) continue;
+      if (best > ROW_TOLERANCE) {
+        // A name cell too far from any anchor is the top/bottom half of a row
+        // split across a page break; hold it for stitching.
+        if (col === "Name" && it.x >= nameX - 3) orphanNameItems.push(it);
+        continue;
+      }
       (buckets[bi][col] ||= []).push(it);
     }
 
-    for (const bucket of buckets) {
+    // Turn each anchor's cells into a member, or a nameless data fragment.
+    for (let i = 0; i < buckets.length; i++) {
+      const bucket = buckets[i];
       // Read top-to-bottom, left-to-right; emails wrap with no separator so
       // their fragments join tightly, everything else joins with a space.
       const join = (key: string, tight = false) =>
@@ -131,22 +174,61 @@ export async function parseRosterPdf(
           .join(tight ? "" : " ")
           .trim();
 
-      const fullName = join("Name");
       const genderRaw = join("Gender");
-      const birthRaw = join("Birth Date");
-      const gender = genderRaw === "M" || genderRaw === "F" ? genderRaw : null;
-      // A real member row always has a gender or a birth date; skip stray text.
-      if (!fullName || (!gender && !birthRaw)) continue;
-
-      rows.push({
-        fullName,
-        household: fullName.includes(",") ? fullName.split(",")[0].trim() : null,
-        gender,
+      const raw: Raw = {
+        fullName: join("Name"),
+        gender: genderRaw === "M" || genderRaw === "F" ? genderRaw : null,
         phone: join("Phone Number") || null,
         email: join("Email", true) || null,
-        birthdate: birthRaw ? parseBirthdate(birthRaw) : null,
+        birthRaw: join("Birth Date"),
+      };
+      if (!raw.gender && !raw.birthRaw) continue; // stray, not a real row
+      fragments.push({
+        kind: raw.fullName ? "complete" : "data",
+        page: p,
+        y: anchorY[i],
+        raw,
       });
     }
+
+    // Group orphan name lines into wrapped names (one per split member).
+    orphanNameItems.sort((a, b) => b.y - a.y || a.x - b.x);
+    let group: Item[] = [];
+    const flush = () => {
+      if (!group.length) return;
+      fragments.push({
+        kind: "name",
+        page: p,
+        y: group[0].y,
+        name: group.map((w) => w.str).join(" ").trim(),
+      });
+      group = [];
+    };
+    for (const it of orphanNameItems) {
+      if (group.length && Math.abs(group[group.length - 1].y - it.y) > NAME_LINE_GAP) flush();
+      group.push(it);
+    }
+    flush();
+  }
+
+  // Stitch the fragments in reading order: an orphan data row and an adjacent
+  // orphan name are the two halves of one member split across a page seam.
+  fragments.sort((a, b) => a.page - b.page || b.y - a.y);
+  const raws: Raw[] = [];
+  for (let i = 0; i < fragments.length; i++) {
+    const f = fragments[i];
+    const next = fragments[i + 1];
+    if (f.kind === "complete") {
+      raws.push(f.raw);
+    } else if (f.kind === "data" && next?.kind === "name") {
+      raws.push({ ...f.raw, fullName: next.name });
+      i++;
+    } else if (f.kind === "name" && next?.kind === "data") {
+      raws.push({ ...next.raw, fullName: f.name });
+      i++;
+    }
+    // A lone data/name fragment with no partner can't be resolved into a
+    // member; dropping it is no worse than the old page-isolated behaviour.
   }
 
   if (!sawRosterPage) {
@@ -158,13 +240,18 @@ export async function parseRosterPdf(
       columns: emptyColumns(),
     };
   }
-  if (!rows.length) {
-    return {
-      rows: [],
-      errors: ["No members were found in that PDF."],
-      columns: emptyColumns(),
-    };
+  if (!raws.length) {
+    return { rows: [], errors: ["No members were found in that PDF."], columns: emptyColumns() };
   }
+
+  const rows: RosterRow[] = raws.map((r) => ({
+    fullName: r.fullName,
+    household: r.fullName.includes(",") ? r.fullName.split(",")[0].trim() : null,
+    gender: r.gender,
+    phone: r.phone,
+    email: r.email,
+    birthdate: r.birthRaw ? parseBirthdate(r.birthRaw) : null,
+  }));
 
   return {
     rows,
