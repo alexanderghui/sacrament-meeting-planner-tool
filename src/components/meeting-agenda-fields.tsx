@@ -4,6 +4,8 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, X, Megaphone, ClipboardList, ChevronDown } from "lucide-react";
 import { Input, Textarea } from "@/components/ui/input";
+import { AutosaveInput, AutosaveTextarea } from "@/components/autosave-input";
+import { useDebouncedCommit } from "@/lib/use-debounced-commit";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
@@ -53,12 +55,17 @@ export function StringListEditor({
   onCommit: (items: string[]) => void;
 }) {
   const [items, setItems] = useState<string[]>(initial);
-  const setAt = (i: number, v: string) =>
-    setItems((arr) => arr.map((x, j) => (j === i ? v : x)));
+  const { schedule, flush } = useDebouncedCommit(onCommit);
+  const setAt = (i: number, v: string) => {
+    const next = items.map((x, j) => (j === i ? v : x));
+    setItems(next);
+    schedule(next); // autosave ~700ms after typing stops
+  };
   const removeAt = (i: number) => {
     const next = items.filter((_, j) => j !== i);
     setItems(next);
-    onCommit(next);
+    schedule(next);
+    flush(); // removal is a discrete action — save now (and cancel any pending)
   };
 
   return (
@@ -75,14 +82,14 @@ export function StringListEditor({
               value={val}
               placeholder={placeholder}
               onChange={(e) => setAt(i, e.target.value)}
-              onBlur={() => onCommit(items)}
+              onBlur={() => flush()}
             />
           ) : (
             <Input
               value={val}
               placeholder={placeholder}
               onChange={(e) => setAt(i, e.target.value)}
-              onBlur={() => onCommit(items)}
+              onBlur={() => flush()}
             />
           )}
           <RemoveButton onClick={() => removeAt(i)} />
@@ -112,12 +119,17 @@ function RosterListEditor({
   onCommit: (items: RosterChange[]) => void;
 }) {
   const [items, setItems] = useState<RosterChange[]>(initial);
-  const setAt = (i: number, patch: Partial<RosterChange>) =>
-    setItems((arr) => arr.map((x, j) => (j === i ? { ...x, ...patch } : x)));
+  const { schedule, flush } = useDebouncedCommit(onCommit);
+  const setAt = (i: number, patch: Partial<RosterChange>) => {
+    const next = items.map((x, j) => (j === i ? { ...x, ...patch } : x));
+    setItems(next);
+    schedule(next); // autosave ~700ms after typing stops
+  };
   const removeAt = (i: number) => {
     const next = items.filter((_, j) => j !== i);
     setItems(next);
-    onCommit(next);
+    schedule(next);
+    flush(); // removal is a discrete action — save now (and cancel any pending)
   };
 
   return (
@@ -129,14 +141,14 @@ function RosterListEditor({
             placeholder="Name"
             className="flex-1"
             onChange={(e) => setAt(i, { name: e.target.value })}
-            onBlur={() => onCommit(items)}
+            onBlur={() => flush()}
           />
           <Input
             value={row.calling}
             placeholder="Calling"
             className="flex-1"
             onChange={(e) => setAt(i, { calling: e.target.value })}
-            onBlur={() => onCommit(items)}
+            onBlur={() => flush()}
           />
           <RemoveButton onClick={() => removeAt(i)} />
         </div>
@@ -249,25 +261,21 @@ export function MeetingAgendaFields({
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <Label>Stake visitors</Label>
-                <Input
+                <AutosaveInput
                   defaultValue={stakeVisitors ?? ""}
                   placeholder="Visiting stake leaders"
-                  onBlur={(e) =>
-                    run(() =>
-                      updateMeetingText(meetingId, "stakeVisitors", e.target.value)
-                    )
+                  onCommit={(v) =>
+                    run(() => updateMeetingText(meetingId, "stakeVisitors", v))
                   }
                 />
               </div>
               <div>
                 <Label>Stake business</Label>
-                <Input
+                <AutosaveInput
                   defaultValue={stakeBusiness ?? ""}
                   placeholder="e.g. turn the time over to …"
-                  onBlur={(e) =>
-                    run(() =>
-                      updateMeetingText(meetingId, "stakeBusiness", e.target.value)
-                    )
+                  onCommit={(v) =>
+                    run(() => updateMeetingText(meetingId, "stakeBusiness", v))
                   }
                 />
               </div>
@@ -275,30 +283,22 @@ export function MeetingAgendaFields({
 
             <div>
               <Label>After-prayer note</Label>
-              <Textarea
+              <AutosaveTextarea
                 defaultValue={openingNote ?? ""}
                 placeholder="Special item right after the opening prayer — e.g. a baby blessing invitation"
-                onBlur={(e) =>
-                  run(() =>
-                    updateMeetingText(meetingId, "openingNote", e.target.value)
-                  )
+                onCommit={(v) =>
+                  run(() => updateMeetingText(meetingId, "openingNote", v))
                 }
               />
             </div>
 
             <div>
               <Label>Ward business note</Label>
-              <Textarea
+              <AutosaveTextarea
                 defaultValue={wardBusinessNote ?? ""}
                 placeholder="e.g. a baptism/confirmation welcome to read"
-                onBlur={(e) =>
-                  run(() =>
-                    updateMeetingText(
-                      meetingId,
-                      "wardBusinessNote",
-                      e.target.value
-                    )
-                  )
+                onCommit={(v) =>
+                  run(() => updateMeetingText(meetingId, "wardBusinessNote", v))
                 }
               />
             </div>

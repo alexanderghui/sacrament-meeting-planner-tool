@@ -11,13 +11,14 @@ import {
   HandHelping,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
-import { Input, Select } from "@/components/ui/input";
+import { Select } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
   MemberCombobox,
   type SpeakerSelection,
 } from "@/components/member-combobox";
+import { AutosaveInput } from "@/components/autosave-input";
 import { HymnCombobox } from "@/components/hymn-combobox";
 import { MeetingAgendaFields } from "@/components/meeting-agenda-fields";
 import { ProgramEditor } from "@/components/program-editor";
@@ -260,49 +261,41 @@ export function MeetingCard({
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
                   <Label>Presiding</Label>
-                  <Input
+                  <AutosaveInput
                     defaultValue={meeting.presiding ?? ""}
                     placeholder="Bishop / counselor"
-                    onBlur={(e) =>
-                      run(() =>
-                        updateMeetingText(meeting.id, "presiding", e.target.value)
-                      )
+                    onCommit={(v) =>
+                      run(() => updateMeetingText(meeting.id, "presiding", v))
                     }
                   />
                 </div>
                 <div>
                   <Label>Conducting</Label>
-                  <Input
+                  <AutosaveInput
                     defaultValue={meeting.conducting ?? ""}
                     placeholder="Counselor conducting"
-                    onBlur={(e) =>
-                      run(() =>
-                        updateMeetingText(meeting.id, "conducting", e.target.value)
-                      )
+                    onCommit={(v) =>
+                      run(() => updateMeetingText(meeting.id, "conducting", v))
                     }
                   />
                 </div>
                 <div>
                   <Label>Chorister</Label>
-                  <Input
+                  <AutosaveInput
                     defaultValue={meeting.chorister ?? ""}
                     placeholder="Music leader"
-                    onBlur={(e) =>
-                      run(() =>
-                        updateMeetingText(meeting.id, "chorister", e.target.value)
-                      )
+                    onCommit={(v) =>
+                      run(() => updateMeetingText(meeting.id, "chorister", v))
                     }
                   />
                 </div>
                 <div>
                   <Label>Pianist / organist</Label>
-                  <Input
+                  <AutosaveInput
                     defaultValue={meeting.accompanist ?? ""}
                     placeholder="Accompanist"
-                    onBlur={(e) =>
-                      run(() =>
-                        updateMeetingText(meeting.id, "accompanist", e.target.value)
-                      )
+                    onCommit={(v) =>
+                      run(() => updateMeetingText(meeting.id, "accompanist", v))
                     }
                   />
                 </div>

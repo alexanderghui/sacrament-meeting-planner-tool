@@ -21,6 +21,8 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Input } from "@/components/ui/input";
+import { AutosaveInput } from "@/components/autosave-input";
+import { useDebouncedCommit } from "@/lib/use-debounced-commit";
 import { Button } from "@/components/ui/button";
 import { HymnCombobox } from "@/components/hymn-combobox";
 import {
@@ -263,6 +265,9 @@ export function ProgramEditor({
   const setMusic = (id: string, text: string) =>
     setRows((rs) => rs.map((r) => (r.id === id && r.kind === "music" ? { ...r, text } : r)));
   const commitMusic = () => persist(rows);
+  // Autosave musical-number text ~700ms after typing stops (value ignored;
+  // commitMusic persists the whole current program body).
+  const musicSave = useDebouncedCommit<string>(() => commitMusic());
 
   // ---- hymn row (at most one) ----
   const hasHymn = rows.some((r) => r.kind === "hymn");
@@ -316,13 +321,13 @@ export function ProgramEditor({
                         placeholder={`Speaker ${speakerNo}`}
                         ariaLabel={`Speaker ${speakerNo}`}
                       />
-                      <Input
+                      <AutosaveInput
                         key={`topic-${slot?.id ?? row.pos}`}
                         defaultValue={slot?.topic ?? ""}
                         placeholder="Topic"
                         disabled={!ready}
-                        onBlur={(e) => {
-                          if (ready) run(() => setSpeakerTopic(slot!.id, e.target.value));
+                        onCommit={(v) => {
+                          if (ready) run(() => setSpeakerTopic(slot!.id, v));
                         }}
                       />
                       <StatusControl
@@ -345,8 +350,11 @@ export function ProgramEditor({
                       <Input
                         value={row.text}
                         placeholder="Musical number — e.g. Ward choir: “O Holy Jesus”"
-                        onChange={(e) => setMusic(row.id, e.target.value)}
-                        onBlur={commitMusic}
+                        onChange={(e) => {
+                          setMusic(row.id, e.target.value);
+                          musicSave.schedule(e.target.value);
+                        }}
+                        onBlur={() => musicSave.flush()}
                       />
                     </div>
                   </SortableRow>
