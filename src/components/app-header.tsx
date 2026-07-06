@@ -7,7 +7,7 @@ import {
   CalendarDays,
   History,
   Activity,
-  HandHelping,
+  Hand,
   LogOut,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -18,7 +18,7 @@ const navItems = [
   { href: "/upcoming", label: "Upcoming", icon: CalendarDays },
   { href: "/history", label: "History", icon: History },
   { href: "/members", label: "Members", icon: Users },
-  { href: "/set-apart", label: "Set apart", icon: HandHelping },
+  { href: "/set-apart", label: "Set apart", icon: Hand },
   { href: "/activity", label: "Activity", icon: Activity },
 ];
 

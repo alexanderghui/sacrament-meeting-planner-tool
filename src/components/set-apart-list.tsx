@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Check, Undo2, HandHelping } from "lucide-react";
+import { Check, Undo2, Hand } from "lucide-react";
 import { setSetApart } from "@/lib/actions";
 import type { SetApartItem } from "@/lib/set-apart";
 
@@ -106,7 +106,7 @@ export function SetApartList({ items: initial }: { items: SetApartItem[] }) {
         <SectionLabel>Needs setting apart</SectionLabel>
         {pending.length === 0 ? (
           <div className="rounded-sm border border-[var(--grey15)] bg-card px-4 py-10 text-center">
-            <HandHelping className="mx-auto size-8 text-muted-foreground" />
+            <Hand className="mx-auto size-8 text-muted-foreground" />
             <p className="mt-3 text-muted-foreground">
               All caught up — no one is waiting to be set apart.
             </p>
