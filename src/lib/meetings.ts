@@ -1,6 +1,6 @@
 import { and, asc, desc, eq, gte, inArray, lt, or } from "drizzle-orm";
 import { getDb } from "./db";
-import { meetings, assignments, members } from "./db/schema";
+import { meetings, assignments, members, type RosterChange } from "./db/schema";
 import { displayName } from "./members";
 import { HYMN_TITLES } from "./hymns";
 import { primaryName } from "./names";
@@ -39,8 +39,9 @@ export type PrayerSlot = {
   name: string | null;
 };
 
-// A person sustained or released in ward business: name + the calling involved.
-export type RosterChange = { name: string; calling: string };
+// Re-exported from the schema (single source of truth) — includes the stable
+// id + set-apart tracking fields.
+export type { RosterChange };
 
 // One row of the ordered post-sacrament program. Speakers reference their
 // assignment by position; music carries its text inline; "hymn" marks where the

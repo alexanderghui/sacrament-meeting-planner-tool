@@ -1,5 +1,6 @@
 "use server";
 
+import { randomUUID } from "node:crypto";
 import { and, eq, gte } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
@@ -198,6 +199,7 @@ function revalidatePlanner() {
   revalidatePath("/members");
   revalidatePath("/history");
   revalidatePath("/activity");
+  revalidatePath("/set-apart");
 }
 
 const MEETING_TEXT_FIELDS = ["conducting", "presiding", "chorister", "accompanist", "musicalNumber", "theme", "notes", "stakeVisitors", "stakeBusiness", "wardBusinessNote", "openingNote"] as const;
@@ -428,8 +430,25 @@ export async function updateMeetingRoster(
 ) {
   if (field !== "released" && field !== "sustained") return;
   const db = await getDb();
+  // Preserve each entry's stable id (generate one if missing) and, for
+  // sustainings, its set-apart tracking — otherwise editing a name here would
+  // wipe the fact that someone had already been set apart.
   const clean = items
-    .map((r) => ({ name: r.name.trim(), calling: r.calling.trim() }))
+    .map((r) => {
+      const base = {
+        id: r.id || randomUUID(),
+        name: r.name.trim(),
+        calling: r.calling.trim(),
+      };
+      return field === "sustained"
+        ? {
+            ...base,
+            setApartOn: r.setApartOn ?? null,
+            setApartBy: r.setApartBy ?? null,
+            setApartAt: r.setApartAt ?? null,
+          }
+        : base;
+    })
     .filter((r) => r.name);
   await db
     .update(meetings)
@@ -446,6 +465,47 @@ export async function updateMeetingRoster(
       : `Cleared ${label} — ${date}`,
   });
   revalidatePlanner();
+}
+
+// Mark a sustaining set apart (on = the ordinance date, defaults to today from
+// the client), edit that date, or clear it (on = null, i.e. undo). Targets the
+// specific entry by its stable id inside the meeting's sustained list.
+export async function setSetApart(
+  meetingId: string,
+  entryId: string,
+  on: string | null
+) {
+  const db = await getDb();
+  const [m] = await db
+    .select({ sustained: meetings.sustained })
+    .from(meetings)
+    .where(eq(meetings.id, meetingId));
+  if (!m) return;
+
+  const who = on ? (await ensureUser())?.name ?? null : null;
+  const at = on ? new Date().toISOString() : null;
+  let target: RosterChange | undefined;
+  const next = (m.sustained ?? []).map((r) => {
+    if (r.id !== entryId) return r;
+    target = r;
+    return { ...r, setApartOn: on, setApartBy: who, setApartAt: at };
+  });
+  if (!target) return;
+
+  await db
+    .update(meetings)
+    .set({ sustained: next, updatedAt: new Date() })
+    .where(eq(meetings.id, meetingId));
+  await recordAudit(db, {
+    action: "updated",
+    entityType: "meeting",
+    entityId: meetingId,
+    summary: on
+      ? `Set apart ${target.name} — ${target.calling}`
+      : `Reopened set-apart for ${target.name} — ${target.calling}`,
+  });
+  revalidatePath("/set-apart");
+  revalidatePath("/activity");
 }
 
 /* -------------------------- assignments -------------------------- */

@@ -158,7 +158,12 @@ function RosterListEditor({
         variant="outline"
         size="sm"
         className="min-h-[44px] sm:min-h-8"
-        onClick={() => setItems((arr) => [...arr, { name: "", calling: "" }])}
+        onClick={() =>
+          setItems((arr) => [
+            ...arr,
+            { id: crypto.randomUUID(), name: "", calling: "" },
+          ])
+        }
       >
         <Plus className="size-4" />
         Add person

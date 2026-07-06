@@ -2,7 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Users, CalendarDays, History, Activity, LogOut } from "lucide-react";
+import {
+  Users,
+  CalendarDays,
+  History,
+  Activity,
+  HandHelping,
+  LogOut,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { signOutAction } from "@/lib/actions";
 import type { Role } from "@/lib/gate";
@@ -11,6 +18,7 @@ const navItems = [
   { href: "/upcoming", label: "Upcoming", icon: CalendarDays },
   { href: "/history", label: "History", icon: History },
   { href: "/members", label: "Members", icon: Users },
+  { href: "/set-apart", label: "Set apart", icon: HandHelping },
   { href: "/activity", label: "Activity", icon: Activity },
 ];
 

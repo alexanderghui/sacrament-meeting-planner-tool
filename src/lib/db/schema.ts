@@ -97,7 +97,19 @@ export const hymns = pgTable("hymns", {
 // One row per Sunday.
 
 // A person sustained or released in ward business: name + the calling involved.
-export type RosterChange = { name: string; calling: string };
+// `id` is a stable per-entry key (added on save) so the set-apart tracker can
+// target a specific sustaining across edits. The setApart* fields apply to
+// sustained entries only: `setApartOn` is the date the ordinance happened
+// (YYYY-MM-DD; null/absent = still pending), `setApartBy`/`setApartAt` record
+// who checked it off and when (audit).
+export type RosterChange = {
+  id?: string;
+  name: string;
+  calling: string;
+  setApartOn?: string | null;
+  setApartBy?: string | null;
+  setApartAt?: string | null;
+};
 
 // One row of the ordered post-sacrament program. Speakers reference their
 // assignment by position; music carries its text inline; "hymn" marks where the
