@@ -19,15 +19,14 @@ export async function fireTrelloSync(): Promise<void> {
   lastFired = now;
 
   try {
-    const headers: Record<string, string> = {
-      authorization: `Bearer ${token}`,
-      "content-type": "application/json",
-    };
-    if (process.env.TRELLO_ROUTINE_BETA)
-      headers["anthropic-beta"] = process.env.TRELLO_ROUTINE_BETA;
     await fetch(url, {
       method: "POST",
-      headers,
+      headers: {
+        authorization: `Bearer ${token}`,
+        "anthropic-beta": "experimental-cc-routine-2026-04-01",
+        "anthropic-version": "2023-06-01",
+        "content-type": "application/json",
+      },
       body: "{}",
       signal: AbortSignal.timeout(5000),
     });
