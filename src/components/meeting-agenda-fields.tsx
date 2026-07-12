@@ -247,56 +247,92 @@ function RosterListEditor({
   items: RosterChange[];
   onCommit: (items: RosterChange[]) => void;
 }) {
-  const [items, setItems] = useState<RosterChange[]>(initial);
+  // Each row needs a stable id for drag keys; RosterChange already carries one
+  // (it's the set-apart entry key), so backfill any that predate it. Reordering
+  // keeps whole rows, so set-apart id/date fields ride along untouched.
+  const [items, setItems] = useState<RosterChange[]>(() =>
+    initial.map((r) => (r.id ? r : { ...r, id: crypto.randomUUID() }))
+  );
   const { schedule, flush } = useDebouncedCommit(onCommit);
-  const setAt = (i: number, patch: Partial<RosterChange>) => {
-    const next = items.map((x, j) => (j === i ? { ...x, ...patch } : x));
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
+  const setAt = (id: string, patch: Partial<RosterChange>) => {
+    const next = items.map((x) => (x.id === id ? { ...x, ...patch } : x));
     setItems(next);
     schedule(next); // autosave ~700ms after typing stops
   };
-  const removeAt = (i: number) => {
-    const next = items.filter((_, j) => j !== i);
+  const removeAt = (id: string) => {
+    const next = items.filter((x) => x.id !== id);
     setItems(next);
     schedule(next);
     flush(); // removal is a discrete action — save now (and cancel any pending)
   };
+  const add = () =>
+    setItems((arr) => [...arr, { id: crypto.randomUUID(), name: "", calling: "" }]);
+
+  function handleDragEnd(e: DragEndEvent) {
+    const { active, over } = e;
+    if (!over || active.id === over.id) return;
+    const from = items.findIndex((x) => x.id === active.id);
+    const to = items.findIndex((x) => x.id === over.id);
+    if (from < 0 || to < 0) return;
+    const next = arrayMove(items, from, to);
+    setItems(next);
+    schedule(next);
+    flush(); // reordering is a discrete action — persist the new order now
+  }
 
   return (
-    <div className="space-y-2">
-      {items.map((row, i) => (
-        <div key={i} className="flex items-start gap-2">
-          <div className="grid flex-1 gap-2 sm:grid-cols-2">
-            <Input
-              value={row.name}
-              placeholder="Name"
-              onChange={(e) => setAt(i, { name: e.target.value })}
-              onBlur={() => flush()}
-            />
-            <Input
-              value={row.calling}
-              placeholder="Calling"
-              onChange={(e) => setAt(i, { calling: e.target.value })}
-              onBlur={() => flush()}
-            />
-          </div>
-          <RemoveButton onClick={() => removeAt(i)} />
-        </div>
-      ))}
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        className="min-h-[44px] sm:min-h-8"
-        onClick={() =>
-          setItems((arr) => [
-            ...arr,
-            { id: crypto.randomUUID(), name: "", calling: "" },
-          ])
-        }
+    <div>
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragEnd={handleDragEnd}
       >
-        <Plus className="size-4" />
-        Add person
-      </Button>
+        <SortableContext
+          items={items.map((x) => x.id!)}
+          strategy={verticalListSortingStrategy}
+        >
+          <div className="space-y-3">
+            {items.map((row) => (
+              <SortableTextRow
+                key={row.id}
+                id={row.id!}
+                onRemove={() => removeAt(row.id!)}
+              >
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <Input
+                    value={row.name}
+                    placeholder="Name"
+                    onChange={(e) => setAt(row.id!, { name: e.target.value })}
+                    onBlur={() => flush()}
+                  />
+                  <Input
+                    value={row.calling}
+                    placeholder="Calling"
+                    onChange={(e) => setAt(row.id!, { calling: e.target.value })}
+                    onBlur={() => flush()}
+                  />
+                </div>
+              </SortableTextRow>
+            ))}
+          </div>
+        </SortableContext>
+      </DndContext>
+      <div className="mt-3 pl-11 sm:pl-10">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="min-h-[44px] sm:min-h-8"
+          onClick={add}
+        >
+          <Plus className="size-4" />
+          Add person
+        </Button>
+      </div>
     </div>
   );
 }
@@ -441,6 +477,7 @@ export function MeetingAgendaFields({
               <Label>New-family move-ins</Label>
               <StringListEditor
                 items={moveIns}
+                sortable
                 placeholder="Family name"
                 addLabel="Add move-in"
                 onCommit={(items) =>
