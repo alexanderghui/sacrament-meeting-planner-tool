@@ -2,7 +2,31 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, X, Megaphone, ClipboardList, ChevronDown } from "lucide-react";
+import {
+  Plus,
+  X,
+  GripVertical,
+  Megaphone,
+  ClipboardList,
+  ChevronDown,
+} from "lucide-react";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  arrayMove,
+  useSortable,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { Input, Textarea } from "@/components/ui/input";
 import { AutosaveInput, AutosaveTextarea } from "@/components/autosave-input";
 import { useDebouncedCommit } from "@/lib/use-debounced-commit";
@@ -39,72 +63,177 @@ function RemoveButton({ onClick }: { onClick: () => void }) {
 
 /* --------------------- string-list editor ------------------------- */
 
+// dnd-kit needs a stable id per row that survives reordering; announcements are
+// stored as a plain string[], so we carry an id alongside each value in state
+// and persist only the strings.
+type TextItem = { id: string; value: string };
+let _textId = 0;
+const newTextId = () => `s-${_textId++}`;
+
 export function StringListEditor({
   items: initial,
   placeholder,
   addLabel,
   multiline = false,
-  numbered = false,
+  sortable = false,
   onCommit,
 }: {
   items: string[];
   placeholder: string;
   addLabel: string;
   multiline?: boolean;
-  numbered?: boolean;
+  sortable?: boolean;
   onCommit: (items: string[]) => void;
 }) {
-  const [items, setItems] = useState<string[]>(initial);
-  const { schedule, flush } = useDebouncedCommit(onCommit);
-  const setAt = (i: number, v: string) => {
-    const next = items.map((x, j) => (j === i ? v : x));
+  const [items, setItems] = useState<TextItem[]>(() =>
+    initial.map((value) => ({ id: newTextId(), value }))
+  );
+  const { schedule, flush } = useDebouncedCommit<TextItem[]>((next) =>
+    onCommit(next.map((x) => x.value))
+  );
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
+
+  const setAt = (id: string, v: string) => {
+    const next = items.map((x) => (x.id === id ? { ...x, value: v } : x));
     setItems(next);
     schedule(next); // autosave ~700ms after typing stops
   };
-  const removeAt = (i: number) => {
-    const next = items.filter((_, j) => j !== i);
+  const removeAt = (id: string) => {
+    const next = items.filter((x) => x.id !== id);
     setItems(next);
     schedule(next);
     flush(); // removal is a discrete action — save now (and cancel any pending)
   };
+  const add = () => setItems((arr) => [...arr, { id: newTextId(), value: "" }]);
+
+  function handleDragEnd(e: DragEndEvent) {
+    const { active, over } = e;
+    if (!over || active.id === over.id) return;
+    const from = items.findIndex((x) => x.id === active.id);
+    const to = items.findIndex((x) => x.id === over.id);
+    if (from < 0 || to < 0) return;
+    const next = arrayMove(items, from, to);
+    setItems(next);
+    schedule(next);
+    flush(); // reordering is a discrete action — persist the new order now
+  }
+
+  const field = (item: TextItem) =>
+    multiline ? (
+      <Textarea
+        value={item.value}
+        placeholder={placeholder}
+        onChange={(e) => setAt(item.id, e.target.value)}
+        onBlur={() => flush()}
+      />
+    ) : (
+      <Input
+        value={item.value}
+        placeholder={placeholder}
+        onChange={(e) => setAt(item.id, e.target.value)}
+        onBlur={() => flush()}
+      />
+    );
+
+  const addButton = (
+    <Button
+      type="button"
+      variant="outline"
+      size="sm"
+      className="min-h-[44px] sm:min-h-8"
+      onClick={add}
+    >
+      <Plus className="size-4" />
+      {addLabel}
+    </Button>
+  );
+
+  // Drag-to-reorder variant — mirrors the Program order rows exactly.
+  if (sortable) {
+    return (
+      <div>
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext
+            items={items.map((x) => x.id)}
+            strategy={verticalListSortingStrategy}
+          >
+            <div className="space-y-3">
+              {items.map((item) => (
+                <SortableTextRow
+                  key={item.id}
+                  id={item.id}
+                  onRemove={() => removeAt(item.id)}
+                >
+                  {field(item)}
+                </SortableTextRow>
+              ))}
+            </div>
+          </SortableContext>
+        </DndContext>
+        <div className="mt-3 pl-11 sm:pl-10">{addButton}</div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-2">
-      {items.map((val, i) => (
-        <div key={i} className="flex items-start gap-2">
-          {numbered && (
-            <span className="mt-2.5 w-5 shrink-0 text-right text-sm tabular-nums text-muted-foreground">
-              {i + 1}.
-            </span>
-          )}
-          {multiline ? (
-            <Textarea
-              value={val}
-              placeholder={placeholder}
-              onChange={(e) => setAt(i, e.target.value)}
-              onBlur={() => flush()}
-            />
-          ) : (
-            <Input
-              value={val}
-              placeholder={placeholder}
-              onChange={(e) => setAt(i, e.target.value)}
-              onBlur={() => flush()}
-            />
-          )}
-          <RemoveButton onClick={() => removeAt(i)} />
+      {items.map((item) => (
+        <div key={item.id} className="flex items-start gap-2">
+          <div className="min-w-0 flex-1">{field(item)}</div>
+          <RemoveButton onClick={() => removeAt(item.id)} />
         </div>
       ))}
-      <Button
+      {addButton}
+    </div>
+  );
+}
+
+// Identical chrome to the Program order rows (see program-editor.tsx) so the
+// drag handle, spacing, and remove button look and behave the same.
+function SortableTextRow({
+  id,
+  children,
+  onRemove,
+}: {
+  id: string;
+  children: React.ReactNode;
+  onRemove?: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+    useSortable({ id });
+  return (
+    <div
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
+      className={cn("flex items-start gap-2", isDragging && "relative z-10 opacity-80")}
+    >
+      <button
         type="button"
-        variant="outline"
-        size="sm"
-        className="min-h-[44px] sm:min-h-8"
-        onClick={() => setItems((arr) => [...arr, ""])}
+        aria-label="Drag to reorder"
+        className="mt-1 flex size-9 shrink-0 cursor-grab touch-none items-center justify-center rounded-sm text-muted-foreground transition-colors hover:bg-[var(--grey2)] hover:text-foreground active:cursor-grabbing sm:size-8"
+        {...attributes}
+        {...listeners}
       >
-        <Plus className="size-4" />
-        {addLabel}
-      </Button>
+        <GripVertical className="size-4" />
+      </button>
+      <div className="min-w-0 flex-1">{children}</div>
+      {onRemove && (
+        <button
+          type="button"
+          onClick={onRemove}
+          aria-label="Remove"
+          className="mt-1 flex size-9 shrink-0 items-center justify-center rounded-sm text-muted-foreground transition-colors hover:bg-[var(--status-red-bg)] hover:text-[var(--status-red)] sm:size-8"
+        >
+          <X className="size-4" />
+        </button>
+      )}
     </div>
   );
 }
@@ -231,7 +360,7 @@ export function MeetingAgendaFields({
         </div>
         <StringListEditor
           items={announcements}
-          numbered
+          sortable
           multiline
           placeholder="Announcement to read from the stand…"
           addLabel="Add announcement"
