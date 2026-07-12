@@ -14,9 +14,23 @@ export type SetApartItem = {
   setApartBy: string | null;
 };
 
+// "Today" in the ward's timezone (America/Denver), as YYYY-MM-DD. Computed here
+// rather than with the UTC-based todayIso() so a sustaining doesn't flip to
+// "should be set apart" a few hours early near midnight.
+function wardToday(): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Denver",
+  }).format(new Date());
+}
+
 // Gather every sustaining across all meetings. The meetings table is small and
 // we pull only three columns, so this stays cheap. Entries without a stable id
 // (legacy, pre-backfill) are skipped since they can't be acted on yet.
+//
+// A person is only pending set-apart once they've actually been sustained, so
+// we skip meetings whose date is still in the future — someone put on a coming
+// Sunday's program shouldn't appear here (or on the Trello board) until that
+// Sunday has arrived.
 export async function getSetAparts(): Promise<SetApartItem[]> {
   const db = await getDb();
   const rows = await db
@@ -27,8 +41,10 @@ export async function getSetAparts(): Promise<SetApartItem[]> {
     })
     .from(meetings);
 
+  const today = wardToday();
   const out: SetApartItem[] = [];
   for (const m of rows) {
+    if (m.date > today) continue; // sustaining hasn't happened yet
     for (const s of m.sustained ?? []) {
       if (!s || !s.id || !s.name?.trim()) continue;
       out.push({

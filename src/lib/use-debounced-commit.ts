@@ -6,10 +6,12 @@ import { useCallback, useEffect, useRef } from "react";
 // saved. Pairing onChange→schedule with onBlur→flush means a typed value is
 // persisted without the field ever needing to lose focus.
 //
-// Note: on unmount we cancel any pending timer but do NOT commit — the field's
-// onBlur (fired by SaveOnHide on app-hide, or by focus moving on collapse/nav)
-// already flushes those cases, and committing during unmount risks a
-// state-update-on-unmounted warning.
+// On unmount we also flush any pending value rather than dropping it. Collapsing
+// a meeting card or tabbing between pages unmounts these fields, and on iOS a
+// focused input is NOT reliably blurred first — so relying on blur alone lost
+// edits ("it didn't save"; a sustaining change never reaching the Set apart
+// tab). Invoking the commit dispatches its server action synchronously, so the
+// write lands even as the field unmounts.
 export function useDebouncedCommit<T>(
   commit: (value: T) => void,
   delay = 700
@@ -42,7 +44,15 @@ export function useDebouncedCommit<T>(
 
   useEffect(
     () => () => {
-      if (timer.current) clearTimeout(timer.current);
+      if (timer.current) {
+        clearTimeout(timer.current);
+        timer.current = null;
+      }
+      if (pending.current) {
+        const { value } = pending.current;
+        pending.current = null;
+        commitRef.current(value);
+      }
     },
     []
   );

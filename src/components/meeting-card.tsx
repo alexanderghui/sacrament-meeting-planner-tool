@@ -156,6 +156,19 @@ export function MeetingCard({
     return { memberId, guestName, name };
   }
 
+  // Free-text fields autosave AND mirror the value into local card state. The
+  // card unmounts its body when collapsed, so without this the uncontrolled
+  // input would re-seed from the stale initial prop on re-expand and appear to
+  // "reset" — even though the value saved fine to the DB.
+  function commitText(
+    field: "presiding" | "conducting" | "chorister" | "accompanist",
+    value: string
+  ) {
+    const clean = value.trim() || null;
+    setMeeting((m) => ({ ...m, [field]: clean }));
+    run(() => updateMeetingText(meeting.id, field, value));
+  }
+
   function pickPrayer(
     role: "opening_prayer" | "closing_prayer",
     sel: SpeakerSelection | null
@@ -277,9 +290,7 @@ export function MeetingCard({
                   <AutosaveInput
                     defaultValue={meeting.presiding ?? ""}
                     placeholder="Bishop / counselor"
-                    onCommit={(v) =>
-                      run(() => updateMeetingText(meeting.id, "presiding", v))
-                    }
+                    onCommit={(v) => commitText("presiding", v)}
                   />
                 </div>
                 <div>
@@ -287,9 +298,7 @@ export function MeetingCard({
                   <AutosaveInput
                     defaultValue={meeting.conducting ?? ""}
                     placeholder="Counselor conducting"
-                    onCommit={(v) =>
-                      run(() => updateMeetingText(meeting.id, "conducting", v))
-                    }
+                    onCommit={(v) => commitText("conducting", v)}
                   />
                 </div>
                 <div>
@@ -297,9 +306,7 @@ export function MeetingCard({
                   <AutosaveInput
                     defaultValue={meeting.chorister ?? ""}
                     placeholder="Music leader"
-                    onCommit={(v) =>
-                      run(() => updateMeetingText(meeting.id, "chorister", v))
-                    }
+                    onCommit={(v) => commitText("chorister", v)}
                   />
                 </div>
                 <div>
@@ -307,9 +314,7 @@ export function MeetingCard({
                   <AutosaveInput
                     defaultValue={meeting.accompanist ?? ""}
                     placeholder="Accompanist"
-                    onCommit={(v) =>
-                      run(() => updateMeetingText(meeting.id, "accompanist", v))
-                    }
+                    onCommit={(v) => commitText("accompanist", v)}
                   />
                 </div>
               </div>
