@@ -430,7 +430,9 @@ export function MembersTable({ members }: { members: MemberRow[] }) {
           "rounded-sm p-1 text-muted-foreground transition-opacity hover:text-foreground focus:opacity-100",
           forceVisible || isHidden
             ? "opacity-100"
-            : "opacity-0 group-hover:opacity-100"
+            : // Hover-reveal on desktop; always visible on touch (iPad has no
+              // hover, so group-hover never fires).
+              "opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100"
         )}
       >
         {isHidden ? <Eye className="size-4" /> : <EyeOff className="size-4" />}
@@ -551,7 +553,11 @@ export function MembersTable({ members }: { members: MemberRow[] }) {
                 <TableCell className="font-normal text-foreground">
                   {nameBlock(
                     m,
-                    "mt-0.5 opacity-0 group-hover/name:opacity-100"
+                    // Hover-reveal on desktop, but ALWAYS visible on touch
+                    // devices (iPad has no hover, so group-hover never fires and
+                    // the pencil would be invisible). Enlarge the tap target on
+                    // touch without shifting the desktop layout.
+                    "mt-0.5 opacity-0 group-hover/name:opacity-100 [@media(hover:none)]:opacity-100 [@media(hover:none)]:-m-1.5 [@media(hover:none)]:p-1.5"
                   )}
                 </TableCell>
                 <TableCell className="hidden sm:table-cell text-muted-foreground">
