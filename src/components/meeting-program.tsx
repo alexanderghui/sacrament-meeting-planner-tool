@@ -1,7 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import type { PlannerMeeting, AssignmentStatusValue } from "@/lib/meetings";
-import { HYMN_TITLES } from "@/lib/hymns";
-import { programMusicalNumbers } from "@/lib/agenda";
+import { buildProgram, hymnText } from "@/lib/agenda";
 
 const STATUS_LABEL: Record<AssignmentStatusValue, string> = {
   invited: "Invited",
@@ -9,13 +8,6 @@ const STATUS_LABEL: Record<AssignmentStatusValue, string> = {
   spoke: "Spoke",
   declined: "Declined",
 };
-
-function hymnLabel(n: number | null, titles: Record<number, string>) {
-  if (n == null) return null;
-  // Prefer the complete bundled hymnbook; fall back to the DB-derived titles.
-  const title = HYMN_TITLES[n] ?? titles[n];
-  return title ? `#${n} — ${title}` : `#${n}`;
-}
 
 function Label({ children }: { children: React.ReactNode }) {
   return (
@@ -25,7 +17,21 @@ function Label({ children }: { children: React.ReactNode }) {
   );
 }
 
-/** Read-only program for a past meeting: presiding/conducting, speakers, prayers, hymns. */
+type Row = {
+  label: string;
+  value: React.ReactNode;
+  status?: AssignmentStatusValue;
+};
+
+/**
+ * Read-only program for a meeting, laid out in the order it actually runs:
+ * opening hymn → invocation → sacrament hymn → speakers / intermediate hymn /
+ * musical numbers → closing hymn → benediction. Speaker order and numbering are
+ * resolved through `buildProgram` (i.e. `programBody`, the drag-arranged source
+ * of truth) — the same resolver the printable /program agenda uses — so the
+ * coordinator and history views match the real program instead of raw
+ * assignment order.
+ */
 export function MeetingProgram({
   meeting,
   hymnTitles,
@@ -33,29 +39,72 @@ export function MeetingProgram({
   meeting: PlannerMeeting;
   hymnTitles: Record<number, string>;
 }) {
-  const speakers = meeting.speakers.filter((s) => s.name);
-  const musicalNumbers = programMusicalNumbers(meeting);
-  const hymns = (
+  // Who runs the meeting — not part of the running order, shown as a header.
+  const roles = (
     [
-      ["Opening", meeting.openingHymn],
-      ["Sacrament", meeting.sacramentHymn],
-      ["Intermediate", meeting.intermediateHymn],
-      ["Closing", meeting.closingHymn],
+      ["Presiding", meeting.presiding],
+      ["Conducting", meeting.conducting],
+      ["Chorister", meeting.chorister],
+      ["Accompanist", meeting.accompanist],
     ] as const
-  ).filter(([, n]) => n != null);
+  ).filter(([, v]) => !!v) as [string, string][];
 
-  const empty =
-    speakers.length === 0 &&
-    hymns.length === 0 &&
-    !meeting.openingPrayer &&
-    !meeting.closingPrayer &&
-    !meeting.presiding &&
-    !meeting.conducting &&
-    !meeting.chorister &&
-    !meeting.accompanist &&
-    musicalNumbers.length === 0;
+  const program = buildProgram({
+    type: meeting.type,
+    speakers: meeting.speakers,
+    intermediateHymn: meeting.intermediateHymn,
+    musicalNumbers: meeting.musicalNumbers,
+    programBody: meeting.programBody,
+    hymnFallback: hymnTitles,
+  });
+  // buildProgram renumbers speakers but doesn't carry their status; look it up
+  // by name for the Invited/Confirmed badge.
+  const statusByName = new Map(
+    meeting.speakers
+      .filter((s) => s.name)
+      .map((s) => [s.name as string, s.status])
+  );
 
-  if (empty) {
+  // Assemble the run-of-show top to bottom.
+  const rows: Row[] = [];
+  const openingHymn = hymnText(meeting.openingHymn, hymnTitles);
+  if (openingHymn) rows.push({ label: "Opening hymn", value: openingHymn });
+  if (meeting.openingPrayer?.name)
+    rows.push({ label: "Invocation", value: meeting.openingPrayer.name });
+  const sacramentHymn = hymnText(meeting.sacramentHymn, hymnTitles);
+  if (sacramentHymn) rows.push({ label: "Sacrament hymn", value: sacramentHymn });
+
+  for (const item of program) {
+    if (item.kind === "speaker") {
+      rows.push({
+        label: `Speaker ${item.position}`,
+        value: (
+          <>
+            <span className="font-medium text-foreground">{item.name}</span>
+            {item.topic && (
+              <span className="text-muted-foreground"> — {item.topic}</span>
+            )}
+          </>
+        ),
+        status: statusByName.get(item.name),
+      });
+    } else if (item.kind === "intermediateHymn") {
+      rows.push({ label: "Intermediate hymn", value: item.text });
+    } else if (item.kind === "musicalNumber") {
+      rows.push({ label: "Musical number", value: item.text });
+    } else if (item.kind === "testimony") {
+      rows.push({ label: "Program", value: "Bearing of testimonies" });
+    } else if (item.kind === "primaryProgram") {
+      rows.push({ label: "Program", value: "Primary program" });
+    }
+  }
+
+  const closingHymn = hymnText(meeting.closingHymn, hymnTitles);
+  if (closingHymn) rows.push({ label: "Closing hymn", value: closingHymn });
+  if (meeting.closingPrayer?.name)
+    rows.push({ label: "Benediction", value: meeting.closingPrayer.name });
+
+  if (roles.length === 0 && rows.length === 0 && !meeting.notes) {
     return (
       <p className="text-sm text-muted-foreground">
         No program details recorded for this meeting.
@@ -64,102 +113,49 @@ export function MeetingProgram({
   }
 
   return (
-    <div className="grid gap-x-10 gap-y-5 sm:grid-cols-2">
-      {(meeting.presiding ||
-        meeting.conducting ||
-        meeting.chorister ||
-        meeting.accompanist) && (
-        <div className="space-y-1 text-sm">
-          {meeting.presiding && (
-            <div className="flex gap-2">
-              <span className="w-24 shrink-0 text-muted-foreground">Presiding</span>
-              <span className="text-foreground">{meeting.presiding}</span>
+    <div className="space-y-4 text-sm">
+      {roles.length > 0 && (
+        <div className="grid gap-x-8 gap-y-1 sm:grid-cols-2">
+          {roles.map(([label, value]) => (
+            <div key={label} className="flex gap-2">
+              <span className="w-24 shrink-0 text-muted-foreground">{label}</span>
+              <span className="text-foreground">{value}</span>
             </div>
-          )}
-          {meeting.conducting && (
-            <div className="flex gap-2">
-              <span className="w-24 shrink-0 text-muted-foreground">Conducting</span>
-              <span className="text-foreground">{meeting.conducting}</span>
-            </div>
-          )}
-          {meeting.chorister && (
-            <div className="flex gap-2">
-              <span className="w-24 shrink-0 text-muted-foreground">Chorister</span>
-              <span className="text-foreground">{meeting.chorister}</span>
-            </div>
-          )}
-          {meeting.accompanist && (
-            <div className="flex gap-2">
-              <span className="w-24 shrink-0 text-muted-foreground">Accompanist</span>
-              <span className="text-foreground">{meeting.accompanist}</span>
-            </div>
-          )}
-        </div>
-      )}
-
-      {speakers.length > 0 && (
-        <div>
-          <Label>Speakers</Label>
-          <ul className="space-y-1.5 text-sm">
-            {speakers.map((s) => (
-              <li key={s.id} className="leading-snug">
-                <span className="font-medium text-foreground">{s.name}</span>
-                {s.topic && (
-                  <span className="text-muted-foreground"> — {s.topic}</span>
-                )}
-                {s.status !== "spoke" && (
-                  <Badge
-                    variant={s.status === "declined" ? "red" : "neutral"}
-                    className="ml-2"
-                  >
-                    {STATUS_LABEL[s.status]}
-                  </Badge>
-                )}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {(meeting.openingPrayer?.name || meeting.closingPrayer?.name) && (
-        <div className="space-y-1 text-sm">
-          <Label>Prayers</Label>
-          {meeting.openingPrayer?.name && (
-            <div className="flex gap-2">
-              <span className="w-24 shrink-0 text-muted-foreground">Opening</span>
-              <span className="text-foreground">{meeting.openingPrayer.name}</span>
-            </div>
-          )}
-          {meeting.closingPrayer?.name && (
-            <div className="flex gap-2">
-              <span className="w-24 shrink-0 text-muted-foreground">Closing</span>
-              <span className="text-foreground">{meeting.closingPrayer.name}</span>
-            </div>
-          )}
-        </div>
-      )}
-
-      {(hymns.length > 0 || musicalNumbers.length > 0) && (
-        <div>
-          <Label>Hymns</Label>
-          <ul className="space-y-0.5 text-sm text-foreground">
-            {hymns.map(([label, n]) => (
-              <li key={label}>
-                <span className="text-muted-foreground">{label}:</span>{" "}
-                {hymnLabel(n, hymnTitles)}
-              </li>
-            ))}
-          </ul>
-          {musicalNumbers.map((mn, i) => (
-            <p key={i} className="mt-1.5 text-sm text-foreground">
-              <span className="text-muted-foreground">Musical number:</span> {mn}
-            </p>
           ))}
         </div>
       )}
 
+      {rows.length > 0 && (
+        <div>
+          <Label>Program</Label>
+          <ol className="space-y-1">
+            {rows.map((r, i) => (
+              <li
+                key={i}
+                className="flex flex-wrap items-baseline gap-x-2 leading-snug"
+              >
+                <span className="w-32 shrink-0 text-muted-foreground">
+                  {r.label}
+                </span>
+                <span className="min-w-0 flex-1">
+                  {r.value}
+                  {r.status && r.status !== "spoke" && (
+                    <Badge
+                      variant={r.status === "declined" ? "red" : "neutral"}
+                      className="ml-2"
+                    >
+                      {STATUS_LABEL[r.status]}
+                    </Badge>
+                  )}
+                </span>
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
+
       {meeting.notes && (
-        <div className="sm:col-span-2 text-sm">
+        <div>
           <Label>Notes</Label>
           <p className="text-muted-foreground">{meeting.notes}</p>
         </div>
