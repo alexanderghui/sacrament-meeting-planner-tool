@@ -9,6 +9,8 @@ import {
   Activity,
   Hand,
   LogOut,
+  Eye,
+  ArrowLeft,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { signOutAction } from "@/lib/actions";
@@ -31,9 +33,16 @@ export function AppHeader({
 }) {
   const pathname = usePathname();
   const firstName = userName?.split(" ")[0];
-  // Coordinators are read-only and only have the one page — no nav.
-  const isCoordinator = role === "coordinator";
-  const home = isCoordinator ? "/coordinator" : "/upcoming";
+  const isCoordinatorSession = role === "coordinator";
+  const isCoordinatorView =
+    pathname === "/coordinator" || pathname.startsWith("/coordinator/");
+  // A disabled password gate reports no role and otherwise grants the same
+  // access as a clerk session, which keeps local development usable.
+  const hasBishopricAccess = !isCoordinatorSession;
+  const showBishopricNav = hasBishopricAccess && !isCoordinatorView;
+  const home = isCoordinatorView || isCoordinatorSession
+    ? "/coordinator"
+    : "/upcoming";
 
   return (
     <header
@@ -86,7 +95,7 @@ export function AppHeader({
             </Link>
 
             <nav className="flex shrink-0 items-center gap-0.5 sm:gap-1">
-              {!isCoordinator &&
+              {showBishopricNav &&
                 navItems.map(({ href, label, icon: Icon }) => {
                 const active =
                   pathname === href || pathname.startsWith(href + "/");
@@ -106,6 +115,38 @@ export function AppHeader({
                   </Link>
                 );
               })}
+              {hasBishopricAccess && (
+                <Link
+                  href={isCoordinatorView ? "/upcoming" : "/coordinator"}
+                  className={cn(
+                    "flex min-h-[44px] items-center justify-center gap-2 rounded-sm px-1.5 py-2 text-sm font-normal transition-colors md:min-h-0 sm:px-3",
+                    isCoordinatorView
+                      ? "text-[var(--link)] hover:bg-accent hover:text-[var(--link-hover)]"
+                      : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                  )}
+                  title={
+                    isCoordinatorView
+                      ? "Return to bishopric view"
+                      : "Preview coordinator view"
+                  }
+                  aria-label={
+                    isCoordinatorView ? "Bishopric view" : "Coordinator view"
+                  }
+                >
+                  {isCoordinatorView ? (
+                    <ArrowLeft className="size-4" />
+                  ) : (
+                    <Eye className="size-4" />
+                  )}
+                  <span
+                    className={
+                      isCoordinatorView ? "hidden md:inline" : "hidden xl:inline"
+                    }
+                  >
+                    {isCoordinatorView ? "Bishopric view" : "Coordinator view"}
+                  </span>
+                </Link>
+              )}
               {firstName && (
                 <span className="hidden md:inline px-2 text-sm text-muted-foreground">
                   {firstName}
