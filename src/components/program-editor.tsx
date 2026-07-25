@@ -31,7 +31,7 @@ import {
 } from "@/components/member-combobox";
 import { cn } from "@/lib/utils";
 import {
-  setSpeaker,
+  setProgramSpeaker,
   setSpeakerTopic,
   setSpeakerStatus,
   setProgramBody,
@@ -221,16 +221,20 @@ export function ProgramEditor({
         return next;
       });
       setRows(nextRows);
-      run(async () => {
-        await setProgramBody(meetingId, rowsToBody(nextRows));
-        await setSpeaker(meetingId, pos, null);
-      });
+      run(() =>
+        setProgramSpeaker(meetingId, pos, null, rowsToBody(nextRows))
+      );
       return;
     }
     const { memberId, guestName, name } = selFields(members, sel);
     patchSlot(pos, { memberId, guestName, name });
     run(async () => {
-      const res = await setSpeaker(meetingId, pos, sel);
+      const res = await setProgramSpeaker(
+        meetingId,
+        pos,
+        sel,
+        rowsToBody(rows)
+      );
       if (res) patchSlot(pos, { id: res.id, status: res.status });
     });
   }
@@ -244,18 +248,19 @@ export function ProgramEditor({
     patchSlot(pos, { memberId, guestName, name, topic: topic || null });
     setAddTopic("");
     setRows(nextRows);
-    // Both writes in one transition, speaker row first so the order is never
-    // persisted referencing a row that failed to save.
+    // The assignment, optional topic, and program order are persisted by one
+    // Server Action so revalidation can only expose the completed state.
     run(async () => {
-      const res = await setSpeaker(meetingId, pos, sel);
+      const res = await setProgramSpeaker(
+        meetingId,
+        pos,
+        sel,
+        rowsToBody(nextRows),
+        topic
+      );
       if (res) {
         patchSlot(pos, { id: res.id, status: res.status });
-        if (topic) {
-          await setSpeakerTopic(res.id, topic);
-          patchSlot(pos, { topic });
-        }
       }
-      await setProgramBody(meetingId, rowsToBody(nextRows));
     });
   }
 
@@ -287,10 +292,14 @@ export function ProgramEditor({
     setRowsAndPersist(next);
   };
 
-  let speakerNo = 0;
   const visibleRows = allowSpeakers
     ? rows
     : rows.filter((r) => r.kind !== "speaker");
+  const speakerNumberByPosition = new Map(
+    visibleRows
+      .filter((row): row is Extract<Row, { kind: "speaker" }> => row.kind === "speaker")
+      .map((row, index) => [row.pos, index + 1])
+  );
 
   return (
     <div>
@@ -307,7 +316,7 @@ export function ProgramEditor({
           <div className="space-y-3">
             {visibleRows.map((row) => {
               if (row.kind === "speaker") {
-                speakerNo += 1;
+                const speakerNo = speakerNumberByPosition.get(row.pos) ?? 1;
                 const slot = slots.get(row.pos);
                 const ready = !!slot?.id && !slot.id.startsWith("tmp-");
                 return (

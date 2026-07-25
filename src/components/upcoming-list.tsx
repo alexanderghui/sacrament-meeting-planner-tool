@@ -34,13 +34,25 @@ export function UpcomingList({
   const [collapsed, setCollapsed] = useState<Set<string>>(
     () => new Set(groups.slice(1).map((g) => g.label))
   );
-  const toggle = (label: string) =>
+  // As with an opened meeting card, preserve a month after its first expansion
+  // so an in-flight save is not destroyed by collapsing the month.
+  const [mounted, setMounted] = useState<Set<string>>(
+    () => new Set(groups.slice(0, 1).map((g) => g.label))
+  );
+  const toggle = (label: string) => {
+    if (collapsed.has(label)) {
+      setMounted((current) => new Set(current).add(label));
+    }
     setCollapsed((prev) => {
       const next = new Set(prev);
-      if (next.has(label)) next.delete(label);
-      else next.add(label);
+      if (next.has(label)) {
+        next.delete(label);
+      } else {
+        next.add(label);
+      }
       return next;
     });
+  };
 
   return (
     <div className="space-y-4">
@@ -65,8 +77,8 @@ export function UpcomingList({
                 · {g.items.length} {g.items.length === 1 ? "Sunday" : "Sundays"}
               </span>
             </button>
-            {!isCollapsed && (
-              <div className="space-y-3">
+            {mounted.has(g.label) && (
+              <div hidden={isCollapsed} className="space-y-3">
                 {g.items.map((m) => (
                   <MeetingCard key={m.id} meeting={m} members={members} />
                 ))}

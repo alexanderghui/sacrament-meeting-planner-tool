@@ -11,22 +11,40 @@ import { meetings, assignments, members } from "../src/lib/db/schema";
 
 const J = (p: string) => JSON.parse(readFileSync(p, "utf8"));
 
+type ScheduleRow = {
+  date: string;
+  speakers?: { name: string }[];
+};
+
+type TrelloRow = {
+  date?: string;
+  cardName?: string;
+  speakers?: string[];
+};
+
+type ConductingRow = {
+  date: string;
+  speakers?: string[];
+};
+
 async function main() {
   const db = await getDb();
 
-  const sched: any[] = J("private/schedule.json");
-  const trello: any[] = J("private/trello.json");
-  const conducting: any[] = J("private/conducting.json");
+  const sched = J("private/schedule.json") as ScheduleRow[];
+  const trello = J("private/trello.json") as TrelloRow[];
+  const conducting = J("private/conducting.json") as ConductingRow[];
 
   const sheetBy = new Map<string, string[]>();
-  for (const m of sched) sheetBy.set(m.date, (m.speakers || []).map((s: any) => s.name));
+  for (const m of sched) {
+    sheetBy.set(m.date, (m.speakers || []).map((speaker) => speaker.name));
+  }
 
   const trelloTitleBy = new Map<string, string>();
   const trelloBodyBy = new Map<string, string[]>();
   for (const c of trello) {
     if (!c.date) continue;
     if (c.cardName) trelloTitleBy.set(c.date, c.cardName);
-    if ((c.speakers || []).length) trelloBodyBy.set(c.date, c.speakers);
+    if (c.speakers?.length) trelloBodyBy.set(c.date, c.speakers);
   }
 
   const conductingBy = new Map<string, string[]>();
@@ -37,10 +55,22 @@ async function main() {
   const memberName = new Map<string, string>(
     (await db.select({ id: members.id, fullName: members.fullName }).from(members)).map((m) => [m.id, m.fullName])
   );
-  const out: any[] = [];
+  const out: {
+    date: string;
+    type: (typeof mtgs)[number]["type"];
+    sheet: string[];
+    trelloTitle: string | null;
+    trelloBody: string[];
+    conducting: string[];
+    dbSpeakers: string[];
+    dbPrayers: string[];
+    dbChorister: (typeof mtgs)[number]["chorister"];
+    dbAccompanist: (typeof mtgs)[number]["accompanist"];
+  }[] = [];
   for (const m of mtgs) {
     const as = await db.select().from(assignments).where(eq(assignments.meetingId, m.id));
-    const named = (a: any) => (a.memberId ? memberName.get(a.memberId) ?? "?" : `guest:${a.guestName}`);
+    const named = (a: (typeof as)[number]) =>
+      a.memberId ? memberName.get(a.memberId) ?? "?" : `guest:${a.guestName}`;
     const dbSpeakers = as.filter((a) => a.role === "speaker").sort((a, b) => a.position - b.position).map(named);
     const dbPrayers = as.filter((a) => a.role === "opening_prayer" || a.role === "closing_prayer").map(named);
     out.push({

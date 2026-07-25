@@ -19,7 +19,9 @@ export function useDebouncedCommit<T>(
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pending = useRef<{ value: T } | null>(null);
   const commitRef = useRef(commit);
-  commitRef.current = commit;
+  useEffect(() => {
+    commitRef.current = commit;
+  }, [commit]);
 
   const flush = useCallback(() => {
     if (timer.current) {

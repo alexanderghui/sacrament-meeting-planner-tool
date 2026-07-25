@@ -385,6 +385,11 @@ export function MeetingAgendaFields({
     released.length > 0 ||
     sustained.length > 0;
   const [showBusiness, setShowBusiness] = useState(hasBusiness);
+  const [businessMounted, setBusinessMounted] = useState(hasBusiness);
+  const toggleBusiness = () => {
+    if (!showBusiness) setBusinessMounted(true);
+    setShowBusiness((wasShown) => !wasShown);
+  };
 
   return (
     <>
@@ -412,7 +417,7 @@ export function MeetingAgendaFields({
       <div>
         <button
           type="button"
-          onClick={() => setShowBusiness((v) => !v)}
+          onClick={toggleBusiness}
           className="-my-2 flex min-h-[44px] items-center gap-2 py-2 text-sm font-semibold text-foreground sm:my-0 sm:min-h-0 sm:py-0"
           aria-expanded={showBusiness}
         >
@@ -426,8 +431,8 @@ export function MeetingAgendaFields({
           />
         </button>
 
-        {showBusiness && (
-          <div className="mt-3 space-y-4">
+        {businessMounted && (
+          <div hidden={!showBusiness} className="mt-3 space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <Label>Stake visitors</Label>

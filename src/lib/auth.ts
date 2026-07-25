@@ -1,5 +1,4 @@
 import NextAuth from "next-auth";
-import { eq } from "drizzle-orm";
 import { authConfig } from "./auth.config";
 import { getDb } from "./db";
 import { users } from "./db/schema";

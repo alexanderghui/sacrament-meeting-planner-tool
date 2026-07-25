@@ -18,6 +18,7 @@ import {
   todayIso,
   type AssignmentStatusValue,
   type MeetingTypeValue,
+  type ProgramBodyItem,
   type RosterChange,
 } from "./meetings";
 import type { DB } from "./db";
@@ -521,14 +522,28 @@ export type SpeakerInput =
   | { guestName: string; memberId?: undefined }
   | null;
 
-export async function setSpeaker(
+function cleanProgramBody(body: ProgramBodyItem[]): ProgramBodyItem[] {
+  return body.filter(
+    (item) => item.kind !== "music" || item.text.trim().length > 0
+  );
+}
+
+// Save the assignment and its place in the run of show as one client-visible
+// mutation. These used to be separate Server Action calls, and each call
+// revalidated /upcoming. That let the browser briefly reconcile an intermediate
+// state where the assignment existed but programBody did not reference it yet.
+export async function setProgramSpeaker(
   meetingId: string,
   position: number,
-  sel: SpeakerInput
+  sel: SpeakerInput,
+  body: ProgramBodyItem[],
+  initialTopic?: string
 ): Promise<{ id: string; status: AssignmentStatusValue } | null> {
   const db = await getDb();
   const memberId = sel?.memberId ?? null;
   const guestName = !memberId ? sel?.guestName?.trim() || null : null;
+  const topic = initialTopic === undefined ? undefined : initialTopic.trim() || null;
+  const cleanBody = cleanProgramBody(body);
   const date = await meetingLabel(db, meetingId);
 
   if (!memberId && !guestName) {
@@ -537,6 +552,12 @@ export async function setSpeaker(
       .select({ memberId: assignments.memberId, guestName: assignments.guestName })
       .from(assignments)
       .where(and(eq(assignments.meetingId, meetingId), eq(assignments.role, "speaker"), eq(assignments.position, position)));
+    // Remove the body reference first. If the following delete ever fails, the
+    // remaining assignment is harmless and cannot appear in the program.
+    await db
+      .update(meetings)
+      .set({ programBody: cleanBody, updatedAt: new Date() })
+      .where(eq(meetings.id, meetingId));
     await db
       .delete(assignments)
       .where(
@@ -552,25 +573,46 @@ export async function setSpeaker(
         action: "deleted",
         entityType: "assignment",
         entityId: meetingId,
-        summary: `Removed ${who} as speaker ${position} — ${date}`,
+        summary: `Removed ${who} as speaker ${position} on ${date}`,
       });
     }
     revalidatePlanner();
     return null;
   }
+
+  const insertValues = {
+    meetingId,
+    role: "speaker" as const,
+    position,
+    memberId,
+    guestName,
+    ...(topic !== undefined ? { topic } : {}),
+  };
+  const updateValues = {
+    memberId,
+    guestName,
+    updatedAt: new Date(),
+    ...(topic !== undefined ? { topic } : {}),
+  };
   const [row] = await db
     .insert(assignments)
-    .values({ meetingId, role: "speaker", position, memberId, guestName })
+    .values(insertValues)
     .onConflictDoUpdate({
       target: [assignments.meetingId, assignments.role, assignments.position],
-      set: { memberId, guestName, updatedAt: new Date() },
+      set: updateValues,
     })
     .returning({ id: assignments.id, status: assignments.status });
+  await db
+    .update(meetings)
+    .set({ programBody: cleanBody, updatedAt: new Date() })
+    .where(eq(meetings.id, meetingId));
   await recordAudit(db, {
     action: "updated",
     entityType: "assignment",
     entityId: row.id,
-    summary: `Set speaker ${position} to ${await selLabel(db, sel)} — ${date}`,
+    summary: topic
+      ? `Set speaker ${position} to ${await selLabel(db, sel)} with topic "${topic}" on ${date}`
+      : `Set speaker ${position} to ${await selLabel(db, sel)} on ${date}`,
   });
   revalidatePlanner();
   return { id: row.id, status: row.status as AssignmentStatusValue };
@@ -578,13 +620,11 @@ export async function setSpeaker(
 
 export async function setProgramBody(
   meetingId: string,
-  body: import("./meetings").ProgramBodyItem[]
+  body: ProgramBodyItem[]
 ) {
   const db = await getDb();
   // Drop empty music rows so the saved order stays clean.
-  const clean = body.filter(
-    (i) => i.kind !== "music" || i.text.trim().length > 0
-  );
+  const clean = cleanProgramBody(body);
   await db
     .update(meetings)
     .set({ programBody: clean, updatedAt: new Date() })

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useId, useMemo, useRef, useState } from "react";
 import { X, ChevronDown, UserPlus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { PickerMember } from "@/lib/meetings";
@@ -34,6 +34,7 @@ export function MemberCombobox({
   const [active, setActive] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const blurTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const listboxId = useId();
 
   const matches = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -104,6 +105,7 @@ export function MemberCombobox({
         type="text"
         role="combobox"
         aria-expanded={open}
+        aria-controls={listboxId}
         aria-autocomplete="list"
         aria-label={ariaLabel}
         autoComplete="off"
@@ -143,7 +145,11 @@ export function MemberCombobox({
               No members found
             </div>
           ) : (
-            <ul role="listbox" className="max-h-60 overflow-auto py-1">
+            <ul
+              id={listboxId}
+              role="listbox"
+              className="max-h-60 overflow-auto py-1"
+            >
               {matches.map((m, i) => (
                 <li
                   key={m.id}

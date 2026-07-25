@@ -110,6 +110,10 @@ export function MeetingCard({
 }) {
   const [meeting, setMeeting] = useState(initial);
   const [expanded, setExpanded] = useState(defaultExpanded);
+  // Lazy on first use, then keep the editor mounted while collapsed. Several
+  // controls intentionally hold optimistic or debounced local state; unmounting
+  // the whole form on every collapse made that state re-seed from stale props.
+  const [editorMounted, setEditorMounted] = useState(defaultExpanded);
   // Speaker names + statuses (in program order) for the collapsed-card preview,
   // kept fresh by the ProgramEditor via onSpeakersChange. Seeded by resolving
   // through programBody — the SAME source the editor uses — so the collapsed
@@ -118,6 +122,15 @@ export function MeetingCard({
   const [programSpeakers, setProgramSpeakers] = useState<
     { name: string | null; status: AssignmentStatusValue }[]
   >(() => seedProgramSpeakers(initial));
+  // Server Actions re-render /upcoming with authoritative data. Adjust during
+  // render when that snapshot changes so children never render the stale copy.
+  // React immediately retries this component with the reconciled state.
+  const [serverSnapshot, setServerSnapshot] = useState(initial);
+  if (initial !== serverSnapshot) {
+    setServerSnapshot(initial);
+    setMeeting(initial);
+    setProgramSpeakers(seedProgramSpeakers(initial));
+  }
   const [, startTransition] = useTransition();
   const router = useRouter();
 
@@ -186,6 +199,10 @@ export function MeetingCard({
     (s) => s.status === "confirmed" || s.status === "spoke"
   ).length;
   const speakerPreview = programSpeakers.map((s) => s.name).join(", ");
+  const toggleExpanded = () => {
+    if (!expanded) setEditorMounted(true);
+    setExpanded((wasExpanded) => !wasExpanded);
+  };
 
   return (
     <Card className="overflow-hidden">
@@ -193,7 +210,7 @@ export function MeetingCard({
       <div className="flex w-full items-stretch">
         <button
           type="button"
-          onClick={() => setExpanded((e) => !e)}
+          onClick={toggleExpanded}
           className="flex min-h-[44px] min-w-0 flex-1 items-center justify-between gap-3 px-4 py-4 text-left transition-colors hover:bg-[var(--grey2)] sm:px-6"
           aria-expanded={expanded}
         >
@@ -241,8 +258,11 @@ export function MeetingCard({
         </a>
       </div>
 
-      {expanded && (
-        <div className="space-y-6 border-t border-[var(--grey10)] px-6 py-5">
+      {editorMounted && (
+        <div
+          hidden={!expanded}
+          className="space-y-6 border-t border-[var(--grey10)] px-6 py-5"
+        >
           {/* Meeting type + open formatted program */}
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div className="w-full sm:max-w-xs">
