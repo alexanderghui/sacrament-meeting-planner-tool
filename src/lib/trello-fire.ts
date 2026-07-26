@@ -31,10 +31,13 @@ export async function fireTrelloSync(): Promise<void> {
 
   try {
     if (!(await claim("trello-fire", THROTTLE_SECONDS))) return;
-  } catch {
-    // Can't reach the claim table — skip the nudge rather than risk a stampede.
-    // The daily scheduled run is the backstop.
-    return;
+  } catch (e) {
+    // Can't consult the shared throttle — most likely deployed ahead of the
+    // migration that creates the table. Fall back to the per-instance check
+    // above, i.e. the behaviour that shipped before this, rather than dropping
+    // the nudge: a paused nudge quietly leaves the board to the daily run,
+    // whereas an unthrottled one is at worst a duplicate the planner reaps.
+    console.warn("trello-fire: shared throttle unavailable, using local only", e);
   }
   lastFired = now;
 
