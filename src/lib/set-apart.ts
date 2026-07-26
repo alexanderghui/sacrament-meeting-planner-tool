@@ -1,5 +1,6 @@
 import { getDb } from "./db";
 import { meetings } from "./db/schema";
+import { claimMany } from "./sync-claim";
 
 // One sustaining flattened out of a meeting's `sustained` list for the
 // set-apart tracker. `meetingDate` is when they were sustained (the "called
@@ -190,9 +191,39 @@ export function planSetApartCards(
   return ops;
 }
 
+// How long a planned create counts as in flight. A run applies its ops within
+// seconds of asking for them, so this only has to cover the window in which a
+// second, overlapping run could ask for the same card again. If a run dies after
+// claiming but before creating, the claim lapses and the next run makes the card.
+const CREATE_CLAIM_SECONDS = 600;
+
 export async function buildSetApartPlanFromDb(
   cards: ExistingCard[]
 ): Promise<SetApartCardOp[]> {
   const items = await getSetAparts();
-  return planSetApartCards(items, cards);
+  const ops = planSetApartCards(items, cards);
+
+  // Two runs that both read the board before either wrote to it will both plan
+  // the same create. Whichever claims the entry first is the only one told to
+  // make the card; the other is handed a plan without it. Throttling the fire
+  // makes overlap unlikely, but it can't rule it out — the daily scheduled run
+  // can always land on top of a fired one — so the guarantee belongs here.
+  const creates = ops.filter((o) => o.action === "create");
+  if (!creates.length) return ops;
+  const key = (ref: string) => `setapart-card:${ref}`;
+  let won: Set<string>;
+  try {
+    won = await claimMany(
+      creates.map((o) => key(o.ref)),
+      CREATE_CLAIM_SECONDS
+    );
+  } catch (e) {
+    // Deploys land before migrations run, so the claim table may not exist yet.
+    // Serve the plan ungated rather than failing the sync outright: the worst
+    // case is the duplicate this used to produce, which planSetApartCards now
+    // archives on the next run.
+    console.warn("set-apart: create claims unavailable, planning ungated", e);
+    return ops;
+  }
+  return ops.filter((o) => o.action !== "create" || won.has(key(o.ref)));
 }

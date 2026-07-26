@@ -201,6 +201,25 @@ export const assignments = pgTable(
   ]
 );
 
+/* --------------------------- sync claims -------------------------- */
+// Shared state for the Trello sync, held in the database because that is the
+// only thing every serverless instance can see. Module-level variables can't do
+// this job: each instance gets its own copy, so an in-process throttle only
+// throttles whichever instance happens to serve a request.
+//
+// One row per claim key, recording when it was last taken:
+//   `trello-fire`           — rate-limits nudges to the sync routine
+//   `setapart-card:<entry>` — one run at a time may plan a card for an entry
+//
+// Claims expire on a TTL instead of being released, so a run that dies partway
+// through frees its claims on its own.
+export const syncClaims = pgTable("sync_claims", {
+  key: text("key").primaryKey(),
+  claimedAt: timestamp("claimed_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
 /* --------------------------- audit log --------------------------- */
 
 export const auditLog = pgTable("audit_log", {
