@@ -42,12 +42,15 @@ export async function getSetAparts(): Promise<SetApartItem[]> {
     .from(meetings);
 
   const today = wardToday();
-  const out: SetApartItem[] = [];
+  // Keyed by entry id so one sustaining can never yield two items: a roster row
+  // copied between meetings keeps its id, and two items sharing an id would make
+  // the Trello plan below emit two creates for the same person.
+  const byEntry = new Map<string, SetApartItem>();
   for (const m of rows) {
     if (m.date > today) continue; // sustaining hasn't happened yet
     for (const s of m.sustained ?? []) {
       if (!s || !s.id || !s.name?.trim()) continue;
-      out.push({
+      const item: SetApartItem = {
         meetingId: m.id,
         meetingDate: m.date,
         entryId: s.id,
@@ -55,10 +58,20 @@ export async function getSetAparts(): Promise<SetApartItem[]> {
         calling: (s.calling ?? "").trim(),
         setApartOn: s.setApartOn ?? null,
         setApartBy: s.setApartBy ?? null,
-      });
+      };
+      const prev = byEntry.get(s.id);
+      byEntry.set(s.id, prev ? preferredEntry(prev, item) : item);
     }
   }
-  return out;
+  return [...byEntry.values()];
+}
+
+// Two occurrences of one entry id is a data anomaly. Prefer the one that records
+// the ordinance, then the earliest sustaining — so a stray copy can't reopen a
+// set-apart that already happened.
+function preferredEntry(a: SetApartItem, b: SetApartItem): SetApartItem {
+  if (!!a.setApartOn !== !!b.setApartOn) return a.setApartOn ? a : b;
+  return a.meetingDate <= b.meetingDate ? a : b;
 }
 
 /* ----------------------- Trello card reconcile ------------------------ */
@@ -111,15 +124,42 @@ export function planSetApartCards(
   items: SetApartItem[],
   cards: ExistingCard[]
 ): SetApartCardOp[] {
-  const byRef = new Map<string, ExistingCard>();
+  // Every card carrying the same Ref is the same person. Duplicates get minted
+  // when two sync runs each plan a create from a snapshot taken before the
+  // other's card landed, so keep one canonical card per ref and archive the
+  // extras. Silently matching just the first one (what this used to do) left the
+  // rest invisible to every later run, so they piled up on the board for good.
+  const groups = new Map<string, ExistingCard[]>();
   for (const c of cards) {
     const ref = parseRef(c.desc);
-    if (ref && !byRef.has(ref)) byRef.set(ref, c);
+    if (!ref) continue;
+    const group = groups.get(ref);
+    if (group) group.push(c);
+    else groups.set(ref, [c]);
   }
+
+  const byRef = new Map<string, ExistingCard>();
+  const redundant: ExistingCard[] = [];
+  for (const [ref, group] of groups) {
+    // A Trello id opens with its creation timestamp, so id order is age order.
+    // Keep the oldest card that's still open — picking a closed twin would
+    // unarchive it while archiving the one already on the board.
+    const sorted = [...group].sort((a, b) => a.id.localeCompare(b.id));
+    const keep = sorted.find((c) => !c.closed) ?? sorted[0];
+    byRef.set(ref, keep);
+    for (const c of sorted) if (c !== keep && !c.closed) redundant.push(c);
+  }
+
   const itemRefs = new Set(items.map((i) => i.entryId));
   const ops: SetApartCardOp[] = [];
 
+  // getSetAparts already collapses repeated entry ids, but hold the invariant
+  // here too: this is the function that mints cards, and one entry must never
+  // get two of them.
+  const planned = new Set<string>();
   for (const it of items) {
+    if (planned.has(it.entryId)) continue;
+    planned.add(it.entryId);
     const title = cardTitle(it);
     const desc = cardDesc(it);
     const card = byRef.get(it.entryId);
@@ -139,11 +179,14 @@ export function planSetApartCards(
   }
 
   // A card whose person no longer exists (sustaining deleted) → archive it.
-  for (const c of cards) {
-    const ref = parseRef(c.desc);
-    if (ref && !itemRefs.has(ref) && !c.closed)
-      ops.push({ action: "archive", cardId: c.id, desc: c.desc ?? "" });
+  for (const [ref, card] of byRef) {
+    if (!itemRefs.has(ref) && !card.closed)
+      ops.push({ action: "archive", cardId: card.id, desc: card.desc ?? "" });
   }
+  // Extra copies of a person who already has a canonical card. Keeping their
+  // existing body means archiving a duplicate never rewrites anything.
+  for (const c of redundant)
+    ops.push({ action: "archive", cardId: c.id, desc: c.desc ?? "" });
   return ops;
 }
 
