@@ -64,7 +64,7 @@ export async function gateCookieFor(role: Role): Promise<string> {
   return `${role}.${await tokenFor(role)}`;
 }
 
-function constantTimeEqual(a: string, b: string): boolean {
+export function constantTimeEqual(a: string, b: string): boolean {
   if (a.length !== b.length) return false;
   let out = 0;
   for (let i = 0; i < a.length; i++) out |= a.charCodeAt(i) ^ b.charCodeAt(i);

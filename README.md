@@ -58,6 +58,7 @@ deployment. Put them in `.env.local` (gitignored).
 | `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET` | Google OAuth client. When present, the login page shows "Sign in with Google" instead of the dev button. |
 | `ALLOWED_EMAILS` | Comma-separated emails allowed to sign in. Blank = anyone may sign in. |
 | `ACCESS_PASSWORD` | Shared passphrase every signed-in user must enter before seeing member data. Blank disables the gate. |
+| `MEMBERS_BACKFILL_SECRET` | Shared secret for `POST /api/members/backfill` (sent in the `x-backfill-key` header). Blank disables the endpoint (503). |
 
 ## Scripts
 
@@ -69,6 +70,7 @@ deployment. Put them in `.env.local` (gitignored).
 | `npm run db:migrate` | Apply migrations to the local PGlite database. |
 | `npm run db:seed` | Seed the sample ward. |
 | `npm run db:setup` | `db:migrate` + `db:seed`. |
+| `npm run test:backfill` | Tests the add-only member backfill against a temporary PGlite database. |
 
 The `scripts/` folder also contains data-import and back-fill utilities
 (`import-schedule`, `import-trello`, `link-nicknames`, etc.). These read from a
