@@ -26,7 +26,6 @@ export const viewport: Viewport = {
   themeColor: "#ffffff",
   // Extend layout under the notch/home indicator so iOS exposes
   // safe-area-inset-* env() values for standalone PWA padding.
-  viewportFit: "cover",
 };
 
 export default function RootLayout({

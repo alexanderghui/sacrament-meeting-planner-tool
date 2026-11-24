@@ -61,18 +61,7 @@ export function AppHeader({
   return (
     <header
       className="sticky top-0 z-30 border-b border-[var(--grey15)] bg-white"
-      style={{ paddingTop: "env(safe-area-inset-top)" }}
     >
-      {/* Fill the safe-area inset behind the bar with white so the status-bar
-          area continues the white header (Safari shows it while scrolling) */}
-      <div
-        aria-hidden
-        className="absolute inset-x-0 top-0"
-        style={{
-          height: "env(safe-area-inset-top)",
-          backgroundColor: "#fff",
-        }}
-      />
 
       {/* Church blue block + rays, left of the title (tablet/desktop only). */}
       <div
