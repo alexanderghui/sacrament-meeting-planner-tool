@@ -23,7 +23,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#006184",
+  themeColor: "#ffffff",
   // Extend layout under the notch/home indicator so iOS exposes
   // safe-area-inset-* env() values for standalone PWA padding.
   viewportFit: "cover",
