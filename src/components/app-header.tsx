@@ -63,14 +63,14 @@ export function AppHeader({
       className="sticky top-0 z-30 border-b border-[var(--grey15)] bg-white"
       style={{ paddingTop: "env(safe-area-inset-top)" }}
     >
-      {/* Fill the safe-area inset behind the bar with the church blue so the
-          notch/status-bar area reads as intentional in standalone PWA mode */}
+      {/* Fill the safe-area inset behind the bar with white so the status-bar
+          area continues the white header (Safari shows it while scrolling) */}
       <div
         aria-hidden
         className="absolute inset-x-0 top-0"
         style={{
           height: "env(safe-area-inset-top)",
-          backgroundColor: "var(--blue25)",
+          backgroundColor: "#fff",
         }}
       />
 
