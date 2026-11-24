@@ -36,8 +36,9 @@ const navItems = [
  *   appear next to the icons only once that container is wide enough to hold
  *   them (`@[37.5rem]`), otherwise the items are 44px icon buttons.
  * - `short` (viewport height < 450px): a slimmer bar.
- * - From `tab` (800px) up the Church blue rays sit to the left of the title,
- *   never behind it.
+ * - At every size the Church blue block + rays sit to the left of the title,
+ *   never behind it: slim below `tab` and on `short`, 42px block + wider rays
+ *   from `tab` / `desk` up.
  */
 export function AppHeader({
   userName,
@@ -63,14 +64,15 @@ export function AppHeader({
       className="sticky top-0 z-30 border-b border-[var(--grey15)] bg-white"
     >
 
-      {/* Church blue block + rays, left of the title (tablet/desktop only). */}
+      {/* Church blue block + rays, left of the title, at every size. Below
+          `xs` they cover only the title row (h-12), not the tab row. */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-y-0 left-0 hidden w-[calc(42px+env(safe-area-inset-left))] bg-[var(--blue25)] tab:block short:hidden"
+        className="pointer-events-none absolute left-0 top-0 h-12 w-[calc(26px+env(safe-area-inset-left))] bg-[var(--blue25)] xs:bottom-0 xs:h-auto tab:w-[calc(42px+env(safe-area-inset-left))] short:w-[calc(24px+env(safe-area-inset-left))]"
       />
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-y-0 left-[calc(42px+env(safe-area-inset-left))] hidden w-20 overflow-hidden tab:block desk:w-28 short:hidden"
+        className="pointer-events-none absolute left-[calc(26px+env(safe-area-inset-left))] top-0 h-12 w-10 overflow-hidden xs:bottom-0 xs:h-auto tab:left-[calc(42px+env(safe-area-inset-left))] tab:w-20 desk:w-28 short:left-[calc(24px+env(safe-area-inset-left))] short:w-10"
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
@@ -84,17 +86,18 @@ export function AppHeader({
         className={cn(
           "relative flex flex-wrap items-center gap-x-2",
           "pl-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.5rem,env(safe-area-inset-right))]",
-          "xs:h-14 xs:flex-nowrap",
+          "xs:h-14 xs:flex-nowrap xs:pl-[calc(26px+2.5rem+0.75rem+env(safe-area-inset-left))]",
           "tab:h-16 tab:pl-[calc(42px+5rem+1.25rem+env(safe-area-inset-left))] tab:pr-[max(1.5rem,env(safe-area-inset-right))]",
           "desk:h-[74px] desk:pl-[calc(42px+7rem+1.5rem+env(safe-area-inset-left))] desk:pr-[max(2rem,env(safe-area-inset-right))]",
-          "short:h-11 short:pl-[max(0.75rem,env(safe-area-inset-left))]"
+          "short:h-11 short:pl-[calc(24px+2.5rem+0.75rem+env(safe-area-inset-left))]"
         )}
       >
+        {/* Below `xs` the tab row spans the full width, so the title (not the
+            whole row) is pushed past the rays. */}
         <Link
           href={home}
-          className="order-1 flex h-12 min-w-0 flex-1 items-center gap-2.5 rounded-sm text-foreground xs:h-auto xs:flex-none short:h-10"
+          className="order-1 ml-[calc(26px+2.5rem+env(safe-area-inset-left))] flex h-12 min-w-0 flex-1 items-center gap-2.5 rounded-sm text-foreground xs:ml-0 xs:h-auto xs:flex-none short:ml-0 short:h-10"
         >
-          <BrandMark className="size-7 tab:hidden short:flex short:size-6" />
           <span className="truncate text-lg font-light leading-none tab:text-[1.375rem] desk:text-[1.5rem] short:text-base">
             Sacrament Planner
           </span>
@@ -164,6 +167,9 @@ export function AppHeader({
   );
 }
 
+// Former phone substitute for the rays; kept but not rendered now that the
+// rays show at every size.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function BrandMark({ className }: { className?: string }) {
   return (
     <span
