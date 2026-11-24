@@ -178,9 +178,12 @@ export function parseRosterCsv(text: string): ParseResult {
   return { rows, errors, columns };
 }
 
-// Order-insensitive name key so "Smith, John" matches "John Smith".
+// Order-insensitive, accent-insensitive name key so "Smith, John" matches
+// "John Smith" and "José" matches "Jose".
 export function nameKey(name: string): string {
   return name
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
     .toLowerCase()
     .replace(/[^a-z0-9 ]/g, " ")
     .split(/\s+/)
