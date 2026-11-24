@@ -9,12 +9,15 @@ export default function UnlockPage() {
   const [state, action, pending] = useActionState(unlock, undefined);
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Church header band */}
-      <div className="relative h-2 bg-[var(--blue25)]" />
+    <div className="min-h-dvh-safe flex flex-col bg-background">
+      {/* Church header band — grows to cover the status bar / notch inset */}
+      <div
+        className="relative shrink-0 bg-[var(--blue25)]"
+        style={{ height: "calc(0.5rem + env(safe-area-inset-top))" }}
+      />
 
       <div
-        className="mx-auto flex min-h-[calc(100vh-0.5rem)] max-w-md flex-col justify-center py-12 pl-[max(env(safe-area-inset-left),1.5rem)] pr-[max(env(safe-area-inset-right),1.5rem)]"
+        className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center py-12 short:py-6 pl-[max(env(safe-area-inset-left),1.5rem)] pr-[max(env(safe-area-inset-right),1.5rem)]"
         style={{ paddingBottom: "calc(3rem + env(safe-area-inset-bottom))" }}
       >
         <div className="mb-8 text-center">
@@ -40,7 +43,7 @@ export default function UnlockPage() {
                 type="password"
                 autoFocus
                 autoComplete="off"
-                className="w-full rounded-sm border border-[var(--grey15)] bg-background px-3 py-2 text-foreground outline-none focus:border-[var(--primary)] focus:ring-1 focus:ring-[var(--primary)] max-sm:min-h-[44px] max-sm:text-base"
+                className="w-full rounded-sm border border-[var(--grey15)] bg-background px-3 py-2 text-foreground outline-none focus:border-[var(--primary)] focus:ring-1 focus:ring-[var(--primary)] min-h-11"
               />
             </div>
 

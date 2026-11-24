@@ -143,7 +143,7 @@ export function StringListEditor({
       type="button"
       variant="outline"
       size="sm"
-      className="min-h-[44px] sm:min-h-8"
+      className="min-h-8 touch:min-h-11"
       onClick={add}
     >
       <Plus className="size-4" />
@@ -229,7 +229,7 @@ function SortableTextRow({
           type="button"
           onClick={onRemove}
           aria-label="Remove"
-          className="mt-1 flex size-9 shrink-0 items-center justify-center rounded-sm text-muted-foreground transition-colors hover:bg-[var(--status-red-bg)] hover:text-[var(--status-red)] sm:size-8"
+          className="tap-target mt-1 flex size-9 shrink-0 items-center justify-center rounded-sm text-muted-foreground transition-colors hover:bg-[var(--status-red-bg)] hover:text-[var(--status-red)] desk:size-8"
         >
           <X className="size-4" />
         </button>
@@ -302,7 +302,7 @@ function RosterListEditor({
                 id={row.id!}
                 onRemove={() => removeAt(row.id!)}
               >
-                <div className="grid gap-2 sm:grid-cols-2">
+                <div className="grid gap-2 tab:grid-cols-2">
                   <Input
                     value={row.name}
                     placeholder="Name"
@@ -326,7 +326,7 @@ function RosterListEditor({
           type="button"
           variant="outline"
           size="sm"
-          className="min-h-[44px] sm:min-h-8"
+          className="min-h-8 touch:min-h-11"
           onClick={add}
         >
           <Plus className="size-4" />
@@ -418,7 +418,7 @@ export function MeetingAgendaFields({
         <button
           type="button"
           onClick={toggleBusiness}
-          className="-my-2 flex min-h-[44px] items-center gap-2 py-2 text-sm font-semibold text-foreground sm:my-0 sm:min-h-0 sm:py-0"
+          className="flex items-center gap-2 text-sm font-semibold text-foreground touch:-my-2 touch:min-h-11 touch:py-2"
           aria-expanded={showBusiness}
         >
           <ClipboardList className="size-4 text-[var(--blue30)]" />
@@ -433,7 +433,7 @@ export function MeetingAgendaFields({
 
         {businessMounted && (
           <div hidden={!showBusiness} className="mt-3 space-y-4">
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-4 tab:grid-cols-2">
               <div>
                 <Label>Stake visitors</Label>
                 <AutosaveInput

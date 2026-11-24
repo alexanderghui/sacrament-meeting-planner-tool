@@ -92,7 +92,7 @@ function MultiSelect<T extends string>({
         type="button"
         onClick={() => setOpen((o) => !o)}
         aria-label={ariaLabel}
-        className="flex h-10 items-center justify-between gap-2 rounded-sm border border-input bg-[var(--input-background)] px-3 text-sm text-foreground transition-colors hover:bg-accent"
+        className="flex h-10 items-center justify-between gap-2 rounded-sm border border-input touch:h-11 bg-[var(--input-background)] px-3 text-sm text-foreground transition-colors hover:bg-accent"
       >
         <span className="max-w-[12rem] truncate">{summary}</span>
         <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
@@ -106,7 +106,7 @@ function MultiSelect<T extends string>({
                 key={o.value}
                 type="button"
                 onClick={() => onToggle(o.value)}
-                className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm hover:bg-accent"
+                className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm hover:bg-accent touch:min-h-11"
               >
                 <span
                   className={cn(
@@ -158,7 +158,7 @@ export function MembersTable({ members }: { members: MemberRow[] }) {
           type="button"
           onClick={() => onSort(col)}
           aria-label={`Sort by ${label}`}
-          className="group inline-flex items-center gap-1 rounded-sm hover:text-foreground"
+          className="group inline-flex items-center gap-1 rounded-sm hover:text-foreground touch:min-h-11"
         >
           {label}
           {active ? (
@@ -364,7 +364,7 @@ export function MembersTable({ members }: { members: MemberRow[] }) {
           onClick={() => setEditingId(m.id)}
           aria-label={`Edit preferred name for ${displayName(m.fullName)}`}
           className={cn(
-            "shrink-0 text-muted-foreground transition-opacity hover:text-foreground focus:opacity-100",
+            "tap-target shrink-0 rounded-sm text-muted-foreground transition-opacity hover:text-foreground focus:opacity-100",
             editClassName
           )}
         >
@@ -386,7 +386,7 @@ export function MembersTable({ members }: { members: MemberRow[] }) {
       }
       aria-label={`Gender for ${m.displayName}`}
       className={cn(
-        "rounded-sm border border-input bg-[var(--input-background)] px-1.5 py-1 text-sm outline-none focus-visible:border-[var(--blue30)] focus-visible:ring-2 focus-visible:ring-[var(--blue30)]/30",
+        "rounded-sm border border-input bg-[var(--input-background)] px-1.5 py-1 text-sm outline-none touch:min-h-11 focus-visible:border-[var(--blue30)] focus-visible:ring-2 focus-visible:ring-[var(--blue30)]/30",
         className
       )}
     >
@@ -427,7 +427,7 @@ export function MembersTable({ members }: { members: MemberRow[] }) {
         }
         title={isHidden ? "Show in list" : "Hide from list"}
         className={cn(
-          "rounded-sm p-1 text-muted-foreground transition-opacity hover:text-foreground focus:opacity-100",
+          "tap-target rounded-sm p-1 text-muted-foreground transition-opacity hover:text-foreground focus:opacity-100",
           forceVisible || isHidden
             ? "opacity-100"
             : // Hover-reveal on desktop; always visible on touch (iPad has no
@@ -444,8 +444,8 @@ export function MembersTable({ members }: { members: MemberRow[] }) {
     <div className="space-y-4">
       {/* Controls */}
       <div className="space-y-3">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="relative w-full sm:max-w-xs">
+        <div className="flex flex-col gap-3 tab:flex-row tab:items-center tab:justify-between">
+          <div className="relative w-full tab:max-w-xs">
             <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               value={query}
@@ -484,7 +484,7 @@ export function MembersTable({ members }: { members: MemberRow[] }) {
                 onClick={() => toggle(setBucketSet, b)}
                 aria-pressed={on}
                 className={cn(
-                  "inline-flex items-center gap-1.5 rounded-sm px-3 py-1.5 text-sm transition-colors",
+                  "inline-flex items-center gap-1.5 rounded-sm px-3 py-1.5 text-sm transition-colors touch:min-h-11",
                   !on && "bg-secondary text-muted-foreground hover:bg-accent hover:text-foreground"
                 )}
                 style={on ? { backgroundColor: color.bg, color: color.fg } : undefined}
@@ -501,7 +501,7 @@ export function MembersTable({ members }: { members: MemberRow[] }) {
             <button
               type="button"
               onClick={clearFilters}
-              className="ml-1 text-sm text-[var(--link)] hover:text-[var(--link-hover)]"
+              className="ml-1 rounded-sm px-1 text-sm text-[var(--link)] hover:text-[var(--link-hover)] touch:min-h-11"
             >
               Clear filters
             </button>
@@ -518,7 +518,7 @@ export function MembersTable({ members }: { members: MemberRow[] }) {
             type="button"
             onClick={() => setShowHidden((s) => !s)}
             aria-pressed={showHidden}
-            className="inline-flex items-center gap-1.5 rounded-sm text-[var(--link)] hover:text-[var(--link-hover)]"
+            className="tap-target inline-flex items-center gap-1.5 rounded-sm text-[var(--link)] hover:text-[var(--link-hover)]"
           >
             {showHidden ? (
               <Eye className="size-3.5" />
@@ -531,12 +531,12 @@ export function MembersTable({ members }: { members: MemberRow[] }) {
       </div>
 
       {/* Desktop / tablet: the original sortable table, unchanged at sm+. */}
-      <div className="hidden rounded-sm border border-[var(--grey15)] bg-card sm:block">
+      <div className="hidden rounded-sm border border-[var(--grey15)] bg-card tab:block">
         <Table>
           <TableHeader>
             <TableRow className="hover:bg-transparent">
               {sortHead("name", "Name")}
-              {sortHead("household", "Household", "hidden sm:table-cell")}
+              {sortHead("household", "Household", "hidden tab:table-cell")}
               {sortHead("gender", "Gender")}
               {sortHead("age", "Age", "hidden md:table-cell")}
               {sortHead("lastSpoke", "Last spoke")}
@@ -557,10 +557,10 @@ export function MembersTable({ members }: { members: MemberRow[] }) {
                     // devices (iPad has no hover, so group-hover never fires and
                     // the pencil would be invisible). Enlarge the tap target on
                     // touch without shifting the desktop layout.
-                    "mt-0.5 opacity-0 group-hover/name:opacity-100 [@media(hover:none)]:opacity-100 [@media(hover:none)]:-m-1.5 [@media(hover:none)]:p-1.5"
+                    "mt-1 opacity-0 group-hover/name:opacity-100 [@media(hover:none)]:opacity-100"
                   )}
                 </TableCell>
-                <TableCell className="hidden sm:table-cell text-muted-foreground">
+                <TableCell className="hidden tab:table-cell text-muted-foreground">
                   {m.household ?? "—"}
                 </TableCell>
                 <TableCell>{genderControl(m)}</TableCell>
@@ -608,7 +608,7 @@ export function MembersTable({ members }: { members: MemberRow[] }) {
       </div>
 
       {/* Phone: stacked card list — same `rows`, same handlers, no horizontal scroll. */}
-      <div className="space-y-2.5 sm:hidden">
+      <div className="space-y-2.5 tab:hidden">
         {rows.map((m) => {
           const isHidden = effHidden(m);
           return (
@@ -622,7 +622,7 @@ export function MembersTable({ members }: { members: MemberRow[] }) {
               {/* Title row: name block (left) + prominent recency badge (right). */}
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
-                  {nameBlock(m, "mt-0.5 -mr-1 p-1")}
+                  {nameBlock(m, "mt-1 ml-1")}
                 </div>
                 <div className="shrink-0">{recencyBadge(m)}</div>
               </div>
@@ -645,7 +645,7 @@ export function MembersTable({ members }: { members: MemberRow[] }) {
               <div className="mt-3 flex items-center justify-between gap-3">
                 <label className="flex items-center gap-2 text-xs text-muted-foreground">
                   Gender
-                  {genderControl(m, "min-h-11 px-2 py-2")}
+                  {genderControl(m, "px-2 py-2")}
                 </label>
                 <span className="[&>button]:min-h-11 [&>button]:min-w-11 [&>button]:flex [&>button]:items-center [&>button]:justify-center">
                   {hideButton(m, true)}

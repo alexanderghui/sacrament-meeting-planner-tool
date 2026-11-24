@@ -261,11 +261,11 @@ export function MeetingCard({
       {editorMounted && (
         <div
           hidden={!expanded}
-          className="space-y-6 border-t border-[var(--grey10)] px-6 py-5"
+          className="space-y-6 border-t border-[var(--grey10)] px-4 py-5 tab:px-6"
         >
           {/* Meeting type + open formatted program */}
           <div className="flex flex-wrap items-end justify-between gap-3">
-            <div className="w-full sm:max-w-xs">
+            <div className="w-full tab:max-w-xs">
               <Label>Meeting type</Label>
               <Select
                 value={meeting.type}
@@ -289,7 +289,7 @@ export function MeetingCard({
               rel="noopener noreferrer"
               className={cn(
                 buttonVariants({ size: "default" }),
-                "min-h-[44px] w-full sm:w-auto"
+                "min-h-[44px] w-full tab:w-auto"
               )}
             >
               <FileText className="size-4" />
@@ -304,7 +304,7 @@ export function MeetingCard({
           ) : (
             <>
               {/* Presiding / conducting */}
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-4 tab:grid-cols-2">
                 <div>
                   <Label>Presiding</Label>
                   <AutosaveInput
@@ -356,7 +356,7 @@ export function MeetingCard({
               />
 
               {/* Opening hymn + invocation */}
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-4 tab:grid-cols-2">
                 <div>
                   <Label>
                     <Music className="size-3.5 text-[var(--blue30)]" /> Opening hymn
@@ -437,7 +437,7 @@ export function MeetingCard({
               )}
 
               {/* Closing hymn + benediction */}
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-4 tab:grid-cols-2">
                 <div>
                   <Label>
                     <Music className="size-3.5 text-[var(--blue30)]" /> Closing hymn
@@ -477,7 +477,7 @@ export function MeetingCard({
             <Button
               variant="ghost"
               size="sm"
-              className="min-h-[44px] text-muted-foreground hover:bg-[var(--grey3)] hover:text-foreground sm:min-h-8"
+              className="min-h-8 text-muted-foreground hover:bg-[var(--grey3)] hover:text-foreground touch:min-h-11"
               title="Move this Sunday to History now, before its date passes"
               onClick={() => run(() => archiveMeeting(meeting.id))}
             >
@@ -487,7 +487,7 @@ export function MeetingCard({
             <Button
               variant="ghost"
               size="sm"
-              className="min-h-[44px] text-muted-foreground hover:bg-[var(--status-red-bg)] hover:text-[var(--status-red)] sm:min-h-8"
+              className="min-h-8 text-muted-foreground hover:bg-[var(--status-red-bg)] hover:text-[var(--status-red)] touch:min-h-11"
               onClick={() => {
                 if (confirm(`Remove ${formatDate(meeting.date)}?`))
                   run(() => removeMeeting(meeting.id));
