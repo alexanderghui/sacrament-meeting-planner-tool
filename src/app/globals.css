@@ -2,6 +2,34 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Viewport height below 450px (landscape phones, Duo spanned landscape):
+   slimmer chrome so content keeps most of the screen. */
+@custom-variant short (@media (max-height: 449px));
+
+/* Anything that isn't the mouse-driven desktop layout: below the desktop
+   breakpoint, or any coarse (finger) pointer such as an iPad in landscape.
+   Used for 44px tap targets. Mirrors the 16px form-control rule below. */
+@custom-variant touch {
+  @media (max-width: 1099px) {
+    @slot;
+  }
+  @media (pointer: coarse) {
+    @slot;
+  }
+}
+
+/* Layout breakpoints beyond Tailwind's defaults.
+   xs   520px  — header fits on one row.
+   tab  800px  — phone layout (member cards, stacked rows) below; table /
+                 multi-column layout from here up. Wider than `sm` (640) so
+                 large phones, landscape phones and the Duo keep the phone UI.
+   desk 1100px — full desktop chrome (below this, form controls are 16px). */
+@theme {
+  --breakpoint-xs: 32.5rem;
+  --breakpoint-tab: 50rem;
+  --breakpoint-desk: 68.75rem;
+}
+
 :root {
   /* Church Website Color System */
   --grey2: #f7f8f8;
@@ -140,11 +168,40 @@
 html {
   /* Stop iOS from auto-enlarging text in landscape / standalone. */
   -webkit-text-size-adjust: 100%;
+  /* The canvas behind everything (overscroll, any area outside the body such
+     as a folding phone's side column) is white so it continues the white
+     header bar rather than showing a grey band beside it. */
+  background-color: #fff;
+  color-scheme: light;
 }
 
 body {
   /* Calm rubber-band overscroll in the standalone home-screen app. */
   overscroll-behavior-y: contain;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+/* Full-height page shells: 100vh fallback, then the dynamic viewport unit so
+   iOS Safari's collapsing toolbars never leave a gap or force a scroll. */
+.min-h-dvh-safe {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+/* Grow a small control's hit area to at least 44x44 without changing its
+   visual size or the surrounding layout (an invisible centred overlay). */
+.tap-target {
+  position: relative;
+}
+.tap-target::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: max(100%, 44px);
+  height: max(100%, 44px);
+  transform: translate(-50%, -50%);
 }
 
 /* Kill the grey tap-flash on iOS without breaking focus-visible outlines. */
@@ -157,9 +214,11 @@ textarea {
   -webkit-tap-highlight-color: transparent;
 }
 
-/* Prevent iOS focus-zoom on small screens: inline table controls use 14px
-   text and trigger zoom-on-tap. Bump font-size only — never padding/height. */
-@media (max-width: 640px) {
+/* Prevent iOS focus-zoom: any control under 16px makes Safari zoom on focus.
+   Applies to every phone/tablet layout (below the desktop breakpoint) and to
+   any touch-first device such as a large iPad. Unlayered, so it wins over
+   Tailwind's text-* utilities. Bump font-size only — never padding/height. */
+@media (max-width: 1099px), (pointer: coarse) {
   input,
   select,
   textarea {

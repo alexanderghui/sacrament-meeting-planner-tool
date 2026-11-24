@@ -321,7 +321,7 @@ export function ProgramEditor({
                 const ready = !!slot?.id && !slot.id.startsWith("tmp-");
                 return (
                   <SortableRow key={row.id} id={row.id}>
-                    <div className="grid gap-2 sm:grid-cols-[1fr_1fr_auto] sm:items-center">
+                    <div className="grid gap-2 tab:grid-cols-[1fr_1fr_auto] tab:items-center">
                       <MemberCombobox
                         members={members}
                         value={slot?.memberId ?? null}
@@ -400,7 +400,7 @@ export function ProgramEditor({
         >
           <GripVertical className="size-4" />
         </span>
-        <div className="grid min-w-0 flex-1 gap-2 sm:grid-cols-[1fr_1fr_auto] sm:items-center">
+        <div className="grid min-w-0 flex-1 gap-2 tab:grid-cols-[1fr_1fr_auto] tab:items-center">
           <MemberCombobox
             key={`add-${rows.length}`}
             members={members}
@@ -425,7 +425,7 @@ export function ProgramEditor({
           type="button"
           variant="outline"
           size="sm"
-          className="min-h-[44px] sm:min-h-8"
+          className="min-h-8 touch:min-h-11"
           onClick={addMusic}
         >
           <Plus className="size-4" />
@@ -436,7 +436,7 @@ export function ProgramEditor({
             type="button"
             variant="outline"
             size="sm"
-            className="min-h-[44px] sm:min-h-8"
+            className="min-h-8 touch:min-h-11"
             onClick={addHymn}
           >
             <Plus className="size-4" />
@@ -480,7 +480,7 @@ function SortableRow({
           type="button"
           onClick={onRemove}
           aria-label="Remove"
-          className="mt-1 flex size-9 shrink-0 items-center justify-center rounded-sm text-muted-foreground transition-colors hover:bg-[var(--status-red-bg)] hover:text-[var(--status-red)] sm:size-8"
+          className="tap-target mt-1 flex size-9 shrink-0 items-center justify-center rounded-sm text-muted-foreground transition-colors hover:bg-[var(--status-red-bg)] hover:text-[var(--status-red)] desk:size-8"
         >
           <X className="size-4" />
         </button>
@@ -501,7 +501,7 @@ function StatusControl({
   return (
     <div
       className={cn(
-        "inline-flex w-full overflow-hidden rounded-sm border border-input sm:w-auto",
+        "inline-flex w-full overflow-hidden rounded-sm border border-input tab:w-auto",
         disabled && "opacity-40"
       )}
     >
@@ -514,7 +514,7 @@ function StatusControl({
             disabled={disabled}
             onClick={() => onChange(opt.value)}
             className={cn(
-              "flex-1 px-2.5 py-2.5 text-xs transition-colors sm:flex-none sm:py-1.5",
+              "flex-1 px-2.5 py-1.5 text-xs transition-colors touch:min-h-11 tab:flex-none",
               i > 0 && "border-l border-input",
               active
                 ? "bg-primary text-primary-foreground"

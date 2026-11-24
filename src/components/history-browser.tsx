@@ -115,14 +115,14 @@ export function HistoryBrowser({
             setOpenId(null);
           }}
           placeholder="Search by speaker, topic, or date"
-          className="pl-9 pr-9 max-sm:text-base"
+          className="pl-9 pr-9"
         />
         {searching && (
           <button
             type="button"
             onClick={() => setQuery("")}
             aria-label="Clear search"
-            className="absolute right-2 top-1/2 -translate-y-1/2 rounded-sm p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
+            className="tap-target absolute right-2 top-1/2 -translate-y-1/2 rounded-sm p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
           >
             <X className="size-4" />
           </button>
@@ -141,7 +141,7 @@ export function HistoryBrowser({
                 setOpenId(null);
               }}
               className={cn(
-                "rounded-sm px-3.5 py-2 text-sm transition-colors sm:px-3 sm:py-1.5",
+                "rounded-sm px-3 py-1.5 text-sm transition-colors touch:min-h-11 touch:min-w-14 touch:px-3.5",
                 y === year
                   ? "bg-primary text-primary-foreground"
                   : "bg-secondary text-muted-foreground hover:bg-accent hover:text-foreground"
@@ -186,18 +186,18 @@ export function HistoryBrowser({
                         type="button"
                         onClick={() => toggle(m.id)}
                         aria-expanded={open}
-                        className="grid w-full grid-cols-[1fr_auto] items-center gap-x-3 gap-y-1 px-4 py-3 text-left transition-colors hover:bg-[var(--grey2)] min-h-[44px] sm:flex sm:items-center"
+                        className="grid w-full grid-cols-[1fr_auto] items-center gap-x-3 gap-y-1 px-4 py-3 text-left transition-colors hover:bg-[var(--grey2)] min-h-[44px] tab:flex tab:items-center"
                       >
-                        <span className="text-sm font-medium text-foreground sm:w-36 sm:shrink-0">
+                        <span className="text-sm font-medium text-foreground tab:w-36 tab:shrink-0">
                           {fmtDate(m.date, searching)}
                         </span>
                         <ChevronDown
                           className={cn(
-                            "size-4 shrink-0 justify-self-end text-muted-foreground transition-transform sm:order-last",
+                            "size-4 shrink-0 justify-self-end text-muted-foreground transition-transform tab:order-last",
                             open && "rotate-180"
                           )}
                         />
-                        <div className="col-span-2 flex min-w-0 items-center gap-2 sm:contents">
+                        <div className="col-span-2 flex min-w-0 items-center gap-2 tab:contents">
                           <Badge variant="outline" className="shrink-0">
                             {TYPE_LABELS[m.type]}
                           </Badge>
@@ -206,7 +206,7 @@ export function HistoryBrowser({
                               Archived
                             </Badge>
                           )}
-                          <span className="flex-1 truncate text-sm text-muted-foreground sm:order-none">
+                          <span className="flex-1 truncate text-sm text-muted-foreground tab:order-none">
                             {names.length > 0 ? names.join(", ") : "—"}
                           </span>
                         </div>
@@ -224,7 +224,7 @@ export function HistoryBrowser({
                                 <button
                                   type="button"
                                   onClick={() => setEditId(null)}
-                                  className="inline-flex shrink-0 items-center gap-1.5 rounded-sm bg-white/70 px-2.5 py-1 font-medium hover:bg-white max-sm:min-h-[40px] max-sm:px-3"
+                                  className="inline-flex shrink-0 items-center gap-1.5 rounded-sm bg-white/70 px-2.5 py-1 font-medium hover:bg-white touch:min-h-11 touch:px-3"
                                 >
                                   <Check className="size-4" /> Done
                                 </button>
@@ -246,7 +246,7 @@ export function HistoryBrowser({
                                         unarchiveMeeting(m.id)
                                       )
                                     }
-                                    className="inline-flex items-center gap-1.5 rounded-sm px-2 py-1 text-sm text-[var(--link)] hover:text-[var(--link-hover)] max-sm:min-h-[44px] max-sm:px-3"
+                                    className="inline-flex items-center gap-1.5 rounded-sm px-2 py-1 text-sm text-[var(--link)] hover:text-[var(--link-hover)] touch:min-h-11 touch:px-3"
                                   >
                                     <ArchiveRestore className="size-3.5" /> Move
                                     back to Upcoming
@@ -257,7 +257,7 @@ export function HistoryBrowser({
                                 <button
                                   type="button"
                                   onClick={() => setEditId(m.id)}
-                                  className="inline-flex items-center gap-1.5 rounded-sm px-2 py-1 text-sm text-[var(--link)] hover:text-[var(--link-hover)] max-sm:min-h-[44px] max-sm:px-3"
+                                  className="inline-flex items-center gap-1.5 rounded-sm px-2 py-1 text-sm text-[var(--link)] hover:text-[var(--link-hover)] touch:min-h-11 touch:px-3"
                                 >
                                   <Pencil className="size-3.5" /> Correct
                                 </button>

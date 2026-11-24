@@ -14,7 +14,7 @@ export default async function UpcomingPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
+      <div className="flex flex-col tab:flex-row items-start justify-between gap-4">
         <div>
           <h2 className="text-2xl sm:text-[1.75rem] font-light text-foreground leading-tight">
             Upcoming meetings
@@ -24,7 +24,7 @@ export default async function UpcomingPage() {
           </p>
         </div>
         <form action={addUpcomingSunday}>
-          <Button type="submit" className="w-full sm:w-auto">
+          <Button type="submit" className="w-full tab:w-auto">
             <Plus className="size-4" />
             Add Sunday
           </Button>

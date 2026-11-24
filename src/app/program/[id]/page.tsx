@@ -19,7 +19,7 @@ export default async function ProgramPage({
   if (!meeting) notFound();
 
   return (
-    <div className="min-h-screen bg-background pb-16">
+    <div className="min-h-dvh-safe bg-background pb-16">
       <AgendaToolbar />
       <div className="px-4 py-8 sm:py-10">
         <AgendaDocument meeting={meeting} hymnTitles={hymnTitles} />

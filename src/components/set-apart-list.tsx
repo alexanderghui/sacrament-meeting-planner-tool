@@ -118,15 +118,18 @@ export function SetApartList({ items: initial }: { items: SetApartItem[] }) {
               return (
                 <li
                   key={it.entryId}
-                  className="flex items-center gap-3 rounded-sm border border-[var(--grey15)] bg-card px-4 py-3"
+                  className="flex items-center gap-2 rounded-sm border border-[var(--grey15)] bg-card py-2 pl-2 pr-4"
                 >
+                  {/* 44px hit area around a 28px circle */}
                   <button
                     type="button"
                     onClick={() => markDone(it)}
                     aria-label={`Mark ${it.name} set apart`}
-                    className="flex size-7 shrink-0 items-center justify-center rounded-full border-2 border-[var(--grey30)] text-transparent transition-colors hover:border-[var(--status-green)] hover:text-[var(--status-green)]"
+                    className="group flex size-11 shrink-0 items-center justify-center rounded-full"
                   >
-                    <Check className="size-4" />
+                    <span className="flex size-7 items-center justify-center rounded-full border-2 border-[var(--grey30)] text-transparent transition-colors group-hover:border-[var(--status-green)] group-hover:text-[var(--status-green)] group-focus-visible:border-[var(--status-green)]">
+                      <Check className="size-4" />
+                    </span>
                   </button>
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
@@ -163,17 +166,25 @@ export function SetApartList({ items: initial }: { items: SetApartItem[] }) {
             {done.map((it) => (
               <li
                 key={it.entryId}
-                className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-sm px-4 py-3"
+                className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-sm py-2 pl-2 pr-4"
               >
+                {/* 44px hit area. Pointer devices reveal the undo "×" on
+                    hover; touch devices (no hover) always show an Undo label
+                    so the action is discoverable. */}
                 <button
                   type="button"
                   onClick={() => undo(it)}
                   aria-label={`Mark ${it.name} not set apart`}
                   title="Undo — mark not set apart"
-                  className="group flex size-7 shrink-0 items-center justify-center rounded-full bg-[var(--status-green)] text-white transition-colors hover:bg-[var(--status-red)]"
+                  className="group flex min-h-11 min-w-11 shrink-0 items-center justify-center gap-1.5 rounded-full text-xs font-medium text-[var(--status-red)]"
                 >
-                  <Check className="size-4 group-hover:hidden" />
-                  <X className="hidden size-4 group-hover:block" />
+                  <span className="flex size-7 items-center justify-center rounded-full bg-[var(--status-green)] text-white transition-colors group-hover:bg-[var(--status-red)]">
+                    <Check className="size-4 group-hover:hidden" />
+                    <X className="hidden size-4 group-hover:block" />
+                  </span>
+                  <span className="hidden pr-1 [@media(hover:none)]:inline">
+                    Undo
+                  </span>
                 </button>
                 <div className="min-w-0 flex-1">
                   <div className="font-medium text-muted-foreground line-through">
@@ -192,7 +203,7 @@ export function SetApartList({ items: initial }: { items: SetApartItem[] }) {
                     value={it.setApartOn ?? ""}
                     onChange={(e) => changeDate(it, e.target.value)}
                     aria-label={`Set-apart date for ${it.name}`}
-                    className="rounded-sm border border-[var(--grey15)] bg-[var(--input-background)] px-2 py-1 text-xs text-foreground outline-none focus-visible:border-[var(--blue30)]"
+                    className="min-h-9 rounded-sm border border-[var(--grey15)] bg-[var(--input-background)] px-2 py-1 text-xs text-foreground outline-none focus-visible:border-[var(--blue30)] pointer-coarse:min-h-11"
                   />
                   {it.setApartBy && <span>by {it.setApartBy}</span>}
                 </div>

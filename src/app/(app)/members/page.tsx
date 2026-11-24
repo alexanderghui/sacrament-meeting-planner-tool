@@ -12,7 +12,7 @@ export default async function MembersPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
+      <div className="flex flex-col tab:flex-row items-start justify-between gap-4">
         <div>
           <h2 className="text-2xl sm:text-[1.75rem] font-light text-foreground leading-tight">
             Members
@@ -26,7 +26,7 @@ export default async function MembersPage() {
           href="/members/import"
           className={cn(
             buttonVariants({ variant: "outline" }),
-            "w-full sm:w-auto"
+            "w-full tab:w-auto"
           )}
         >
           <Upload className="size-4" />

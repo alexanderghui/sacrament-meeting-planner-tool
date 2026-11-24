@@ -64,7 +64,7 @@ export function UpcomingList({
               type="button"
               onClick={() => toggle(g.label)}
               aria-expanded={!isCollapsed}
-              className="mb-3 flex w-full items-center gap-1.5 rounded-sm px-1 py-1 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground transition-colors hover:text-foreground"
+              className="mb-1 flex min-h-11 w-full items-center gap-1.5 rounded-sm px-1 py-1 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground transition-colors hover:text-foreground"
             >
               <ChevronDown
                 className={cn(

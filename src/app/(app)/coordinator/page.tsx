@@ -77,7 +77,7 @@ export default async function CoordinatorPage() {
                   href={`/program/${m.id}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex shrink-0 items-center gap-1.5 text-sm text-[var(--link)] hover:text-[var(--link-hover)]"
+                  className="-mx-2 -my-3 inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-sm px-2 text-sm text-[var(--link)] hover:text-[var(--link-hover)]"
                 >
                   <FileText className="size-4" />
                   View full program
