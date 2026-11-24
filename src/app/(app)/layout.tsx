@@ -11,11 +11,11 @@ export default async function AppLayout({
   const [user, role] = await Promise.all([currentUser(), currentRole()]);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-dvh-safe bg-background">
       <SaveOnHide />
       <AppHeader userName={user?.name} role={role} />
       <main
-        className="max-w-7xl mx-auto py-8 pl-[max(env(safe-area-inset-left),1rem)] pr-[max(env(safe-area-inset-right),1rem)] sm:pl-[max(env(safe-area-inset-left),1.5rem)] sm:pr-[max(env(safe-area-inset-right),1.5rem)] lg:pl-[max(env(safe-area-inset-left),2rem)] lg:pr-[max(env(safe-area-inset-right),2rem)]"
+        className="max-w-7xl mx-auto py-8 short:pt-4 pl-[max(env(safe-area-inset-left),1rem)] pr-[max(env(safe-area-inset-right),1rem)] sm:pl-[max(env(safe-area-inset-left),1.5rem)] sm:pr-[max(env(safe-area-inset-right),1.5rem)] lg:pl-[max(env(safe-area-inset-left),2rem)] lg:pr-[max(env(safe-area-inset-right),2rem)]"
         style={{ paddingBottom: "calc(2rem + env(safe-area-inset-bottom))" }}
       >
         {children}
